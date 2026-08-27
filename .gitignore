@@ -1,0 +1,14 @@
+# Generated at runtime
+data/
+
+# Generated assets (rebuild with: npm run icons)
+public/icons/
+public/manifest.webmanifest
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Local tooling
+node_modules/
+*.log

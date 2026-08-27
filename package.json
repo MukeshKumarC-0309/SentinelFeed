@@ -1,0 +1,27 @@
+{
+  "name": "sentinel-feed",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-refreshing cybersecurity news briefing with derived industry insights and a rolling 12-hour archive.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "refresh": "node scripts/refresh-once.js",
+    "sources": "node scripts/check-sources.js",
+    "test": "node scripts/selftest.js",
+    "icons": "node scripts/make-icons.js",
+    "share": "node scripts/share.js",
+    "service:install": "bash scripts/service.sh install",
+    "service:uninstall": "bash scripts/service.sh uninstall",
+    "service:status": "bash scripts/service.sh status",
+    "service:restart": "bash scripts/service.sh restart",
+    "service:logs": "bash scripts/service.sh logs"
+  },
+  "dependencies": {},
+  "bin": {
+    "sentinel": "./bin/sentinel"
+  }
+}
