@@ -14,11 +14,11 @@
     "test": "node scripts/selftest.js",
     "icons": "node scripts/make-icons.js",
     "share": "node scripts/share.js",
-    "service:install": "bash scripts/service.sh install",
-    "service:uninstall": "bash scripts/service.sh uninstall",
-    "service:status": "bash scripts/service.sh status",
-    "service:restart": "bash scripts/service.sh restart",
-    "service:logs": "bash scripts/service.sh logs"
+    "service:install": "node scripts/service.js install",
+    "service:uninstall": "node scripts/service.js uninstall",
+    "service:status": "node scripts/service.js status",
+    "service:restart": "node scripts/service.js restart",
+    "service:logs": "node scripts/service.js logs"
   },
   "dependencies": {},
   "bin": {

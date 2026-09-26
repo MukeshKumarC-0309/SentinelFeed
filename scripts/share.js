@@ -28,7 +28,11 @@ for (const entry of data.urls) {
 
 if (!data.lanReady) {
   console.log('\n  Reachable from this machine only. To open it on your phone:');
-  console.log('    HOST=0.0.0.0 npm run service:install\n');
+  console.log(
+    process.platform === 'win32'
+      ? '    sentinel install -BindHost 0.0.0.0\n'
+      : '    HOST=0.0.0.0 sentinel install\n',
+  );
   process.exit(0);
 }
 

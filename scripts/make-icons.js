@@ -1,12 +1,17 @@
 /**
  * Generate the home-screen icons and the web app manifest.
  *   node scripts/make-icons.js
+ *
+ * The server also runs this on startup when the manifest is missing, so a
+ * fresh clone needs no extra step.
  */
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { renderIcon } from '../src/icon.js';
 
-const dir = path.resolve(process.cwd(), 'public', 'icons');
+const publicDir = fileURLToPath(new URL('../public/', import.meta.url));
+const dir = path.join(publicDir, 'icons');
 await fs.mkdir(dir, { recursive: true });
 
 const targets = [
@@ -39,5 +44,5 @@ const manifest = {
   ],
 };
 
-await fs.writeFile(path.resolve(process.cwd(), 'public', 'manifest.webmanifest'), JSON.stringify(manifest, null, 2));
+await fs.writeFile(path.join(publicDir, 'manifest.webmanifest'), JSON.stringify(manifest, null, 2));
 console.log('  manifest.webmanifest');

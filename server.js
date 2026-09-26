@@ -511,6 +511,14 @@ server.listen(config.port, config.host, async () => {
     if (token.source === 'generated') console.log(`[server] token: ${token.value}`);
   }
 
+  // Icons are generated rather than committed; draw them on a fresh clone.
+  try {
+    await fs.access(path.join(publicDir, 'manifest.webmanifest'));
+  } catch {
+    console.log('[server] generating home-screen icons');
+    await import('./scripts/make-icons.js').catch((err) => console.error('[server] icons:', err.message));
+  }
+
   try {
     await scheduler.init();
     cache.invalidate();

@@ -17,6 +17,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
+import { writeJsonAtomic } from './atomic.js';
 
 const root = () => path.resolve(process.cwd(), config.dataDir);
 const trendsPath = () => path.join(root(), 'trends.json');
@@ -25,11 +26,7 @@ const searchPath = () => path.join(root(), 'search.json');
 const EMPTY_TRENDS = { version: 1, editions: [], entities: { cves: {}, actors: {} } };
 const EMPTY_SEARCH = { version: 1, clippings: [] };
 
-async function writeJson(file, value) {
-  const temp = `${file}.${process.pid}.tmp`;
-  await fs.writeFile(temp, JSON.stringify(value), 'utf8');
-  await fs.rename(temp, file);
-}
+const writeJson = (file, value) => writeJsonAtomic(file, value);
 
 async function readJson(file, fallback) {
   try {

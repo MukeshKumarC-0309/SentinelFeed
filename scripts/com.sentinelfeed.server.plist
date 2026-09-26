@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SENTINEL FEED launchd agent (template).
+
+  Do not edit the placeholders by hand - run scripts/service.sh install, which
+  substitutes the real paths and copies the result to
+  ~/Library/LaunchAgents/com.sentinelfeed.server.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.sentinelfeed.server</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__NODE__</string>
+        <string>__APPDIR__/server.js</string>
+    </array>
+
+    <!-- DATA_DIR is relative, so the working directory decides where editions land. -->
+    <key>WorkingDirectory</key>
+    <string>__APPDIR__</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>__NODEDIR__:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>PORT</key>
+        <string>__PORT__</string>
+        <key>HOST</key>
+        <string>__HOST__</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+        <key>SITE_URL</key>
+        <string>__SITEURL__</string>
+    </dict>
+
+    <!-- Start at login and keep it up: restart on crash, on kill, on clean exit. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Wait this long between restarts so a persistent failure cannot spin. -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>ProcessType</key>
+    <string>Adaptive</string>
+
+    <key>StandardOutPath</key>
+    <string>__LOGDIR__/sentinel-feed.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>__LOGDIR__/sentinel-feed.error.log</string>
+</dict>
+</plist>

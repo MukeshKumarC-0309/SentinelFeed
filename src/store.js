@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
+import { writeJsonAtomic } from './atomic.js';
 
 const root = path.resolve(process.cwd(), config.dataDir);
 const editionsDir = path.join(root, 'editions');
@@ -22,10 +23,8 @@ async function ensureDirs() {
 }
 
 /** Write JSON atomically so a crash mid-write cannot corrupt the archive. */
-async function writeJson(file, value) {
-  const temp = `${file}.${process.pid}.tmp`;
-  await fs.writeFile(temp, JSON.stringify(value, null, 2), 'utf8');
-  await fs.rename(temp, file);
+function writeJson(file, value) {
+  return writeJsonAtomic(file, value, { pretty: true });
 }
 
 async function readJson(file, fallback) {

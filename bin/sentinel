@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+# SENTINEL FEED — one command.
+#
+#   sentinel            make sure it is running, then open it
+#   sentinel open       open it (assumes it is running)
+#   sentinel status     where it is installed, running, next refresh
+#   sentinel new        build a fresh edition now
+#   sentinel logs       follow the log
+#   sentinel share      URLs and a QR code for your other devices
+#   sentinel stop       stop it, leaving it installed
+#   sentinel uninstall  remove the background service entirely
+#   sentinel restart    restart it
+#
+set -euo pipefail
+
+# Resolve the app directory through any symlink, so this works from PATH.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+APPDIR="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
+
+PORT="${PORT:-4173}"
+URL="http://127.0.0.1:$PORT"
+SERVICE="$APPDIR/scripts/service.sh"
+
+say() { printf '%s\n' "$*"; }
+
+running() { curl -fsS -o /dev/null --max-time 2 "$URL/api/status" 2>/dev/null; }
+
+installed() {
+  [ -f "$HOME/Library/LaunchAgents/com.sentinelfeed.server.plist" ] ||
+    [ -f "/Library/LaunchDaemons/com.sentinelfeed.server.plist" ]
+}
+
+wait_ready() {
+  for _ in $(seq 1 60); do
+    running && return 0
+    sleep 1
+  done
+  return 1
+}
+
+ensure_running() {
+  running && return 0
+
+  if installed; then
+    say "Starting the background service…"
+    bash "$SERVICE" restart >/dev/null 2>&1 || true
+  else
+    say "Not installed as a service yet — starting it in the background."
+    say "Run 'sentinel install' to have it start automatically at login."
+    # Detached so closing this terminal does not take the site with it.
+    ( cd "$APPDIR" && nohup node server.js >>"$HOME/Library/Logs/SentinelFeed/sentinel-feed.log" 2>&1 & ) || true
+  fi
+
+  say "Waiting for the first edition (about 30 seconds on a cold start)…"
+  wait_ready || { say "It did not come up. Try: sentinel logs"; exit 1; }
+}
+
+summary() {
+  curl -fsS "$URL/api/briefing" 2>/dev/null | node -e '
+let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{
+  try{
+    const j=JSON.parse(d);
+    const lead=j.stories[0];
+    console.log("");
+    console.log("  " + (lead ? lead.title : "(no stories)"));
+    if (lead) console.log("  " + lead.sourceName);
+    console.log("");
+  }catch{}
+});' || true
+}
+
+case "${1:-open}" in
+  open|"")
+    ensure_running
+    say "SENTINEL FEED — $URL"
+    summary
+    open "$URL"
+    ;;
+  install)   bash "$SERVICE" install ;;
+  status)   bash "$SERVICE" status ;;
+  logs)     bash "$SERVICE" logs ;;
+  restart)  bash "$SERVICE" restart ;;
+  new)
+    ensure_running
+    bash "$SERVICE" refresh
+    ;;
+  stop)      bash "$SERVICE" stop ;;
+  uninstall) bash "$SERVICE" uninstall ;;
+  share)
+    ensure_running
+    node "$APPDIR/scripts/share.js"
+    ;;
+  -h|--help|help)
+    # Print this file's own header comment, so help can never drift from it.
+    awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$SOURCE"
+    ;;
+  *)
+    say "unknown command: $1"
+    say "try: sentinel help"
+    exit 1
+    ;;
+esac

@@ -23,6 +23,10 @@ import { RefreshAbandoned } from '../src/pipeline.js';
 import { encodeQr, ecCodewords, qrSvg } from '../src/qr.js';
 import { GLOSSARY, glossaryIndex } from '../src/glossary.js';
 import { isTailnetIPv4 } from '../src/network.js';
+import { writeJsonAtomic } from '../src/atomic.js';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 let passed = 0;
 let failed = 0;
@@ -862,6 +866,33 @@ test('token is read from header, custom header or query', () => {
   assert.equal(presentedToken({ headers: {} }, url), 'fromquery');
   assert.equal(presentedToken({ headers: {} }, new URL('http://x/api/refresh')), '');
 });
+
+/* ---- Files ------------------------------------------------------------ */
+
+{
+  // Async, so it runs outside test(); the result is reported the same way.
+  const name = 'atomic writes replace files and leave no temp file behind';
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sentinel-'));
+  try {
+    const file = path.join(dir, 'x.json');
+    await writeJsonAtomic(file, { v: 1 });
+    await writeJsonAtomic(file, { v: 2 }, { pretty: true });
+    assert.deepEqual(JSON.parse(await fs.readFile(file, 'utf8')), { v: 2 });
+
+    // A failure that is not a transient lock must surface, and clean up.
+    const blocked = path.join(dir, 'blocked');
+    await fs.mkdir(path.join(blocked, 'inner'), { recursive: true });
+    await assert.rejects(writeJsonAtomic(blocked, { v: 3 }));
+    assert.deepEqual((await fs.readdir(dir)).sort(), ['blocked', 'x.json']);
+    passed += 1;
+    console.log(`  ok    ${name}`);
+  } catch (err) {
+    failed += 1;
+    console.log(`  FAIL  ${name}\n        ${err.message}`);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+}
 
 console.log(`\n  ${passed} passed, ${failed} failed\n`);
 process.exit(failed ? 1 : 0);

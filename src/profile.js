@@ -19,6 +19,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
+import { writeJsonAtomic } from './atomic.js';
 
 const profilePath = () => path.resolve(process.cwd(), config.dataDir, 'profile.json');
 
@@ -38,10 +39,8 @@ const EMPTY = {
 let writeChain = Promise.resolve();
 
 async function writeJson(file, value) {
-  const temp = `${file}.${process.pid}.tmp`;
   await fs.mkdir(path.dirname(file), { recursive: true });
-  await fs.writeFile(temp, JSON.stringify(value), 'utf8');
-  await fs.rename(temp, file);
+  await writeJsonAtomic(file, value);
 }
 
 export async function readProfile() {

@@ -1,0 +1,30 @@
+services:
+  sentinel-feed:
+    build: .
+    image: sentinel-feed
+    container_name: sentinel-feed
+    restart: unless-stopped
+    ports:
+      # Bind to all interfaces so phones and other machines on the LAN or
+      # tailnet can reach it. Use "127.0.0.1:4173:4173" to keep it local.
+      - "4173:4173"
+    volumes:
+      - sentinel-data:/data
+    environment:
+      REFRESH_HOURS: "12"
+      # Set this so the RSS feed and notifications carry working links.
+      SITE_URL: "${SITE_URL:-http://localhost:4173}"
+      # Leave unset to have a token generated into /data/secret.json on boot.
+      SENTINEL_TOKEN: "${SENTINEL_TOKEN:-}"
+      # Optional delivery - see README.
+      WEBHOOK_URL: "${WEBHOOK_URL:-}"
+      WEBHOOK_URGENT_ONLY: "${WEBHOOK_URGENT_ONLY:-}"
+      EMAIL_PROVIDER: "${EMAIL_PROVIDER:-}"
+      EMAIL_API_KEY: "${EMAIL_API_KEY:-}"
+      EMAIL_FROM: "${EMAIL_FROM:-}"
+      EMAIL_TO: "${EMAIL_TO:-}"
+      # Enable only when running behind a reverse proxy you control.
+      TRUST_PROXY: "${TRUST_PROXY:-}"
+
+volumes:
+  sentinel-data:
