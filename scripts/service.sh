@@ -143,7 +143,12 @@ cmd_install() {
   launchctl bootout "$GUI_DOMAIN/$LABEL" 2>/dev/null || true
   node="$(render "$AGENT_TEMPLATE" "$AGENT_TARGET")"
 
-  launchctl bootstrap "$GUI_DOMAIN" "$AGENT_TARGET"
+  # Right after a bootout launchd can still be tearing the old job down and
+  # refuses with an I/O error; a moment later the same call succeeds.
+  launchctl bootstrap "$GUI_DOMAIN" "$AGENT_TARGET" 2>/dev/null || {
+    sleep 2
+    launchctl bootstrap "$GUI_DOMAIN" "$AGENT_TARGET"
+  }
   launchctl enable "$GUI_DOMAIN/$LABEL"
 
   link_command
