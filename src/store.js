@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
-import { writeJsonAtomic } from './atomic.js';
+import { readJsonFile, writeJsonAtomic } from './atomic.js';
 
 const root = path.resolve(process.cwd(), config.dataDir);
 const editionsDir = path.join(root, 'editions');
@@ -27,13 +27,7 @@ function writeJson(file, value) {
   return writeJsonAtomic(file, value, { pretty: true });
 }
 
-async function readJson(file, fallback) {
-  try {
-    return JSON.parse(await fs.readFile(file, 'utf8'));
-  } catch {
-    return fallback;
-  }
-}
+const readJson = readJsonFile;
 
 export async function readIndex() {
   await ensureDirs();
@@ -61,7 +55,7 @@ export async function readEdition(id) {
 }
 
 /** Summary row kept in index.json so the archive list loads without reading every edition. */
-function summarise(edition) {
+export function summarise(edition) {
   return {
     id: edition.id,
     createdAt: edition.createdAt,

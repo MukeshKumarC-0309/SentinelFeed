@@ -8,6 +8,25 @@ const TRANSIENT = new Set(['EPERM', 'EACCES', 'EBUSY']);
 const DELAYS_MS = [50, 100, 200, 400, 800, 1600];
 
 /**
+ * Read a JSON file, or return `fallback` when it does not exist yet.
+ *
+ * Only a missing file counts as empty. Any other failure - an I/O error, a
+ * file a sync client has offloaded and cannot fetch right now, a damaged
+ * file - is thrown, because treating it as empty would let the next write
+ * replace real data with nothing.
+ */
+export async function readJsonFile(file, fallback) {
+  let text;
+  try {
+    text = await fs.readFile(file, 'utf8');
+  } catch (err) {
+    if (err.code === 'ENOENT') return typeof fallback === 'function' ? fallback() : fallback;
+    throw err;
+  }
+  return JSON.parse(text);
+}
+
+/**
  * Write JSON atomically: to a temporary file first, then renamed over the
  * target, so a crash mid-write can never leave a half-written file behind.
  */

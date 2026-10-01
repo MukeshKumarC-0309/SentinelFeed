@@ -17,7 +17,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
-import { writeJsonAtomic } from './atomic.js';
+import { readJsonFile, writeJsonAtomic } from './atomic.js';
 
 const root = () => path.resolve(process.cwd(), config.dataDir);
 const trendsPath = () => path.join(root(), 'trends.json');
@@ -29,12 +29,8 @@ const EMPTY_SEARCH = { version: 1, clippings: [] };
 const writeJson = (file, value) => writeJsonAtomic(file, value);
 
 async function readJson(file, fallback) {
-  try {
-    const parsed = JSON.parse(await fs.readFile(file, 'utf8'));
-    return parsed && typeof parsed === 'object' ? parsed : structuredClone(fallback);
-  } catch {
-    return structuredClone(fallback);
-  }
+  const parsed = await readJsonFile(file, () => structuredClone(fallback));
+  return parsed && typeof parsed === 'object' ? parsed : structuredClone(fallback);
 }
 
 export const readTrends = () => readJson(trendsPath(), EMPTY_TRENDS);

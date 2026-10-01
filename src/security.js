@@ -10,6 +10,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { config } from './config.js';
+import { readJsonFile } from './atomic.js';
 
 const secretPath = () => path.resolve(process.cwd(), config.dataDir, 'secret.json');
 
@@ -28,14 +29,12 @@ export async function getToken() {
     return cachedToken;
   }
 
-  try {
-    const stored = JSON.parse(await fs.readFile(secretPath(), 'utf8'));
-    if (stored?.token) {
-      cachedToken = { value: stored.token, source: 'data/secret.json' };
-      return cachedToken;
-    }
-  } catch {
-    /* fall through and mint a new one */
+  // Only a missing file means "mint one": an unreadable token file must not
+  // be silently replaced, or every client holding the old token breaks.
+  const stored = await readJsonFile(secretPath(), null);
+  if (stored?.token) {
+    cachedToken = { value: stored.token, source: 'data/secret.json' };
+    return cachedToken;
   }
 
   const token = randomBytes(24).toString('base64url');

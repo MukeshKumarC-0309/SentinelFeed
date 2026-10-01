@@ -19,7 +19,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from './config.js';
-import { writeJsonAtomic } from './atomic.js';
+import { readJsonFile, writeJsonAtomic } from './atomic.js';
 
 const profilePath = () => path.resolve(process.cwd(), config.dataDir, 'profile.json');
 
@@ -44,19 +44,16 @@ async function writeJson(file, value) {
 }
 
 export async function readProfile() {
-  try {
-    const parsed = JSON.parse(await fs.readFile(profilePath(), 'utf8'));
-    return {
-      ...structuredClone(EMPTY),
-      ...parsed,
-      seen: parsed.seen || {},
-      read: parsed.read || {},
-      newIds: Array.isArray(parsed.newIds) ? parsed.newIds : [],
-      watch: { ...EMPTY.watch, ...(parsed.watch || {}) },
-    };
-  } catch {
-    return structuredClone(EMPTY);
-  }
+  const parsed = await readJsonFile(profilePath(), null);
+  if (!parsed) return structuredClone(EMPTY);
+  return {
+    ...structuredClone(EMPTY),
+    ...parsed,
+    seen: parsed.seen || {},
+    read: parsed.read || {},
+    newIds: Array.isArray(parsed.newIds) ? parsed.newIds : [],
+    watch: { ...EMPTY.watch, ...(parsed.watch || {}) },
+  };
 }
 
 /** Apply `mutate` to the profile and persist, one writer at a time. */

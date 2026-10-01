@@ -23,7 +23,7 @@ import { RefreshAbandoned } from '../src/pipeline.js';
 import { encodeQr, ecCodewords, qrSvg } from '../src/qr.js';
 import { GLOSSARY, glossaryIndex } from '../src/glossary.js';
 import { isTailnetIPv4 } from '../src/network.js';
-import { writeJsonAtomic } from '../src/atomic.js';
+import { readJsonFile, writeJsonAtomic } from '../src/atomic.js';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -871,7 +871,7 @@ test('token is read from header, custom header or query', () => {
 
 {
   // Async, so it runs outside test(); the result is reported the same way.
-  const name = 'atomic writes replace files and leave no temp file behind';
+  const name = 'atomic writes leave no temp file; only a missing file reads as empty';
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sentinel-'));
   try {
     const file = path.join(dir, 'x.json');
@@ -884,6 +884,11 @@ test('token is read from header, custom header or query', () => {
     await fs.mkdir(path.join(blocked, 'inner'), { recursive: true });
     await assert.rejects(writeJsonAtomic(blocked, { v: 3 }));
     assert.deepEqual((await fs.readdir(dir)).sort(), ['blocked', 'x.json']);
+
+    // Only a missing file reads as empty; an unreadable one must throw, or the
+    // next write would replace real data with nothing.
+    assert.equal(await readJsonFile(path.join(dir, 'absent.json'), 'empty'), 'empty');
+    await assert.rejects(readJsonFile(blocked, 'empty'));
     passed += 1;
     console.log(`  ok    ${name}`);
   } catch (err) {
