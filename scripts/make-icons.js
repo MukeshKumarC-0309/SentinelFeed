@@ -35,8 +35,8 @@ const manifest = {
   scope: '/',
   display: 'standalone',
   orientation: 'portrait-primary',
-  background_color: '#05070b',
-  theme_color: '#05070b',
+  background_color: '#161616',
+  theme_color: '#161616',
   icons: [
     { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
     { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

@@ -59,6 +59,23 @@ Open a new terminal afterwards, and `sentinel` works from anywhere.
 
 ---
 
+## Design
+
+The interface is built on IBM's [Carbon Design System](https://carbondesignsystem.com)
+(Apache-2.0), in its Gray 100 dark theme. IBM rebuilt its QRadar security analyst interface in
+Carbon, and it fits a security briefing without leaning on neon or
+glow: a dark neutral surface, panels layered one step lighter, a single blue accent, square
+geometry, and status carried by colour-coded tags. Type is [IBM Plex](https://github.com/IBM/plex)
+(SIL Open Font License 1.1) - Plex Sans for reading, Plex Mono for data such as CVE IDs,
+timestamps and counts.
+
+There is no Carbon dependency at runtime. The colour, type, spacing and motion values come
+from Carbon's published tokens, and `public/css/style.css` restyles the page's own markup in
+Carbon's idiom: line tabs, tiles, tags, an accordion for topics, a content switcher, a data
+table for the entity ledger, inline notifications, a toggletip for the glossary, and a modal
+for device pairing. The fonts are bundled in `public/fonts/` with their licence, so the site
+needs no third-party requests and works offline.
+
 ## What it does
 
 **Briefing** — opens on a **cover**, not on the feed. The first screen is one story and a
@@ -594,8 +611,8 @@ Everything is environment variables; defaults are the shipped behaviour.
 
 ## Generated files
 
-Three things are built rather than committed, so the repository holds no binaries and
-nothing can drift out of sync with its source:
+Three things are built rather than committed, so nothing generated can drift out of sync
+with its source (the only binaries in the repository are the five IBM Plex font files):
 
 | Path | Built by | From |
 | --- | --- | --- |
@@ -635,6 +652,7 @@ src/atomic.js          Atomic JSON writes, with retries for Windows file locks
 src/pipeline.js        One full refresh
 src/scheduler.js       The 12-hour cycle
 public/                Frontend (no framework, no build)
+public/fonts/          IBM Plex Sans and Mono (Latin-1 subsets) and their licence
 data/editions/         One JSON file per edition
 data/trends.json       Theme history and entity ledgers
 data/search.json       Compact archive search index
@@ -678,5 +696,5 @@ npm run service:uninstall      # stop and remove the service
   instead of waiting out a cache lifetime.
 - Only headlines and short extracts are stored; copyright stays with each publisher and every
   clipping links back to the original. Bear that in mind before exposing this publicly.
-- The interface is dark by design; the **FX** toggle disables the grid, scanlines and glow.
+- The interface is dark by design; the **FX** toggle hides the faint background grid.
   `prefers-reduced-motion` is respected automatically.
