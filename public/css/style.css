@@ -143,6 +143,10 @@
 /* ---- Base ------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* `hidden` always wins. Without this, any component with its own display
+   value (the toolbar buttons, the switchers, the ticker) shows regardless. */
+[hidden] { display: none !important; }
+
 /* Clip, not hide, and on the root only: overflow on body would make it a
    scroll container of its own and unpin the sticky header. */
 html {
@@ -259,7 +263,6 @@ html[data-fx='off'] .pulse { animation: none; }
   flex: none;
 }
 
-.brand-text { display: flex; align-items: baseline; gap: var(--sp-05); min-width: 0; }
 
 .brand-text h1 {
   font-size: 14px;
@@ -270,19 +273,6 @@ html[data-fx='off'] .pulse { animation: none; }
   white-space: nowrap;
 }
 .brand-text h1 span { font-weight: 400; color: var(--text-secondary); margin-left: 0.3em; }
-
-.tagline {
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.32px;
-  color: var(--text-helper);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-left: var(--sp-05);
-  border-left: 1px solid var(--border-subtle-00);
-}
-.tagline .sep { padding: 0 var(--sp-03); color: var(--border-strong-01); }
 
 .status-strip {
   display: flex;
@@ -348,14 +338,6 @@ html[data-fx='off'] .pulse { animation: none; }
   font-weight: 600;
   box-shadow: inset 0 -2px 0 var(--border-interactive);
 }
-.tab-index {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-helper);
-  margin-right: var(--sp-03);
-  font-weight: 400;
-}
-.tab.is-active .tab-index { color: var(--link-primary); }
 
 /* Ghost buttons, small: the header's global actions. */
 .ghost-btn {
@@ -392,6 +374,11 @@ html[data-fx='off'] .pulse { animation: none; }
 .ghost-btn[aria-pressed='false'] .dot-sm { background: var(--border-strong-01); }
 
 /* ---- Live alert ticker -------------------------------------------------- */
+/* The briefing's cover already leads with the most urgent story, so the
+   rotating ticker would only compete with it there; it runs on the other
+   views. */
+html[data-view='briefing'] .ticker { display: none; }
+
 .ticker {
   max-width: var(--max);
   margin: 0 auto;
@@ -510,15 +497,14 @@ main {
 
 /* ---- The cover ----------------------------------------------------------- */
 /* The briefing opens on one story, a few figures and a lot of air, set in
-   Carbon's expressive display type. The feed begins below the fold. */
+   Carbon's expressive display type. The cover is sized to its content, so
+   the top of the feed shows beneath it and invites the scroll. */
 .sitrep {
   position: relative;
-  min-height: min(72vh, 680px);
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: var(--sp-07);
-  padding: var(--sp-06) 0 var(--sp-09);
+  padding: var(--sp-09) 0 var(--sp-10);
 }
 
 .sitrep-rule { display: none; }
@@ -592,48 +578,39 @@ main {
 .sitrep-byline:hover { text-decoration: none; color: var(--text-secondary); }
 .sitrep-byline:hover::after { color: var(--link-primary-hover); text-decoration: underline; }
 
-/* Figures: a row of tiles, like a console's summary counters. */
+/* Figures: one quiet line under the lead, read as a sentence. */
 .sitrep-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-03) var(--sp-05);
   margin: 0;
-  background: var(--border-subtle-00);
-  border: 1px solid var(--border-subtle-00);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.16px;
 }
 
 .sitrep-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-02);
   margin: 0;
-  background: var(--layer-01);
-  padding: var(--sp-05);
+}
+.sitrep-stat + .sitrep-stat {
+  padding-left: var(--sp-05);
+  border-left: 1px solid var(--border-subtle-01);
 }
 
-.sitrep-stat dt {
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.32px;
-  color: var(--text-secondary);
-  margin-bottom: var(--sp-04);
-}
+.sitrep-stat dt { color: var(--text-helper); }
 
+/* The value reads first, then its label: "60 clippings". */
 .sitrep-stat dd {
+  order: -1;
   margin: 0;
-  font-size: 42px;
-  line-height: 50px;
-  font-weight: 300;
+  font-family: var(--mono);
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
-.sitrep-stat dd .unit {
-  font-size: 14px;
-  color: var(--text-helper);
-  margin-left: var(--sp-03);
-  letter-spacing: 0.16px;
-}
-.sitrep-stat[data-tone='alert'] { box-shadow: inset 3px 0 0 var(--support-error); }
 .sitrep-stat[data-tone='alert'] dd { color: var(--support-error); }
-.sitrep-stat[data-tone='ok'] { box-shadow: inset 3px 0 0 var(--support-success); }
-.sitrep-stat[data-tone='new'] { box-shadow: inset 3px 0 0 var(--interactive); }
 .sitrep-stat[data-tone='new'] dd { color: var(--link-primary); }
 
 .sitrep-watch {
@@ -660,35 +637,6 @@ main {
   border-radius: 1rem;
   padding: 0 var(--sp-03);
 }
-
-/* The cue is a Carbon tertiary button. */
-.sitrep-cue {
-  appearance: none;
-  cursor: pointer;
-  align-self: flex-start;
-  background: transparent;
-  border: 1px solid var(--text-primary);
-  border-radius: 0;
-  color: var(--text-primary);
-  font-family: var(--sans);
-  font-size: 14px;
-  line-height: 18px;
-  letter-spacing: 0.16px;
-  min-height: 48px;
-  padding: 0 var(--sp-05);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-09);
-  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
-}
-.sitrep-cue:hover { background: var(--background-inverse); color: var(--text-inverse); }
-.sitrep-cue:focus-visible { outline-offset: 1px; }
-.sitrep-arrow { animation: nudge 2.4s var(--ease) infinite; }
-@keyframes nudge {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(3px); }
-}
-html[data-fx='off'] .sitrep-arrow { animation: none; }
 
 /* Staged entrance */
 .sitrep > * { animation: riseIn 0.5s var(--ease-entrance) both; }
@@ -879,6 +827,19 @@ html[data-fx='off'] .sitrep-arrow { animation: none; }
   line-height: 22px;
   letter-spacing: 0.16px;
 }
+/* In the grid a card is a preview: three lines, the rest is one click away. */
+.story-grid .card-summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Explain mode is for reading closely, so it shows the whole summary and
+   every term in it. */
+html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
+  display: block;
+  overflow: visible;
+}
 .card.is-lead .card-summary { font-size: 16px; line-height: 24px; max-width: 84ch; }
 
 .card-foot {
@@ -925,6 +886,7 @@ html[data-fx='off'] .sitrep-arrow { animation: none; }
   align-items: baseline;
 }
 .also a { color: var(--text-secondary); }
+.also-more { color: var(--text-helper); cursor: default; }
 .also a:hover { color: var(--link-primary-hover); }
 
 /* Reading state: what is read recedes, what is new is marked once. */
@@ -1921,14 +1883,12 @@ code.block {
 
   .ticker-src, .ticker-count { display: none; }
 
-  .sitrep { min-height: auto; padding: var(--sp-03) 0 var(--sp-07); gap: var(--sp-06); }
+  .sitrep { padding: var(--sp-03) 0 var(--sp-07); gap: var(--sp-06); }
   .sitrep-stamp { flex-wrap: wrap; gap: var(--sp-01) var(--sp-04); }
   .sitrep-dot { display: none; }
   .sitrep-lead { max-width: none; }
   .sitrep-dek { font-size: 16px; line-height: 24px; }
-  .sitrep-stats { grid-template-columns: repeat(2, 1fr); }
-  .sitrep-stat dd { font-size: 32px; line-height: 40px; }
-  .sitrep-cue { align-self: stretch; justify-content: space-between; }
+  .sitrep-stat + .sitrep-stat { padding-left: 0; border-left: 0; }
 
   .story-grid { grid-template-columns: 1fr; }
   .card.is-lead { padding: var(--sp-05); }
@@ -1970,7 +1930,7 @@ code.block {
 }
 
 @media print {
-  .fx-layer, .masthead, .footer, .toolbar, .sitrep-cue { display: none; }
+  .fx-layer, .masthead, .footer, .toolbar { display: none; }
   body { background: #fff; color: #161616; }
   .card, .panel, .mini, .edition { background: #fff; box-shadow: none; border: 1px solid #c6c6c6; }
   .card-title a, .clip-title a, .result-title a { color: #161616; }

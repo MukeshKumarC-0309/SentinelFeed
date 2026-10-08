@@ -10,7 +10,6 @@ const state = {
   status: null,
   loadedViews: new Set(),
   archiveFilter: '',
-  density: 'cards',
   openSections: new Set(),
   topics: null,
   trends: null,
@@ -122,22 +121,31 @@ function storyCard(story, { lead = false, index = 0 } = {}) {
     .map((t) => `<span class="tag">${esc(t.label)}</span>`)
     .join('');
 
-  const also = story.alsoReportedBy?.length
-    ? `<div class="also"><span class="also-label">Also reported by</span>${story.alsoReportedBy
+  // Two corroborating sources are enough to show a story is widely covered;
+  // the rest are counted rather than listed, with their names on hover.
+  const others = story.alsoReportedBy || [];
+  const shown = lead ? others : others.slice(0, 2);
+  const hidden = others.slice(shown.length);
+  const also = others.length
+    ? `<div class="also"><span class="also-label">Also reported by</span>${shown
         .map(
           (a) =>
             `<a href="${safeUrl(a.url)}" target="_blank" rel="noopener noreferrer" title="${esc(a.title)}">${esc(
               a.sourceName,
             )}</a>`,
         )
-        .join('')}</div>`
+        .join('')}${
+        hidden.length
+          ? `<span class="also-more" title="${esc(hidden.map((a) => a.sourceName).join(', '))}">+${hidden.length} more</span>`
+          : ''
+      }</div>`
     : '';
 
   const idx = index ? String(index).padStart(2, '0') : '';
 
   return `
     <article class="card${lead ? ' is-lead' : ''}" data-story="${esc(story.id)}"
-             data-read="${isRead(story.id)}" data-new="${isNew(story.id)}">
+             data-read="${isRead(story.id)}" data-new="${showsNew(story.id)}">
       ${idx ? `<span class="card-index">${idx}</span>` : ''}
       <div class="card-top">
         <span class="chip">${esc(story.sourceName)}</span>
@@ -163,6 +171,17 @@ function storyCard(story, { lead = false, index = 0 } = {}) {
 /* ---- reader profile ---------------------------------------------------- */
 
 const isNew = (id) => Boolean(state.profile?.newIds?.includes(id));
+
+/**
+ * Whether "new" means anything right now. On a first visit, or after a long
+ * absence, everything is new - marking all of it would only add noise - so
+ * stories are flagged only when some are new and others are not.
+ */
+function newIsInformative() {
+  const count = state.profile?.newCount || 0;
+  return count > 0 && count < (state.briefing?.stories?.length || 0);
+}
+const showsNew = (id) => newIsInformative() && isNew(id);
 const watching = (bucket, key) => Boolean(state.profile?.watch?.[bucket]?.includes(key));
 const isRead = (id) => Boolean(state.profile?.readIds?.includes(id));
 
@@ -216,8 +235,7 @@ function updateReadingControls() {
     return;
   }
   // The unread filter only earns its place once something is actually new.
-  const worthShowing = profile.newCount > 0 && profile.newCount < (state.briefing?.stories?.length || 0);
-  seg.hidden = !worthShowing;
+  seg.hidden = !newIsInformative();
   markAll.hidden = profile.readCount >= (state.briefing?.stories?.length || 0);
   $('#easiest-first').hidden = !state.explain;
 }
@@ -380,36 +398,31 @@ function renderSitrep() {
     if (signal) flag.textContent = signal;
   }
 
-  // Four figures, chosen because each one answers a question a reader
-  // actually has on arrival: how urgent, how much, how wide, how fresh.
+  // One quiet line of figures, each answering a question a reader has on
+  // arrival: what is new to me, how urgent, how much, how complete.
   const profile = state.profile;
+  const partiallyNew = newIsInformative();
   const stats = [];
 
   // What is new to *this reader* leads, because roughly half of each edition
-  // repeats the last one and that is the number worth arriving to. On a first
-  // visit everything is new, which says nothing, so the figure stays away.
-  const partiallyNew = profile && profile.newCount > 0 && profile.newCount < stories.length;
-  if (partiallyNew) stats.push({ label: 'New for you', value: profile.newCount, tone: 'new' });
+  // repeats the last one. On a first visit everything is new, which says
+  // nothing, so the figure stays away.
+  if (partiallyNew) stats.push({ label: 'new for you', value: profile.newCount, tone: 'new' });
+  if (alerts > 0) stats.push({ label: alerts === 1 ? 'active alert' : 'active alerts', value: alerts, tone: 'alert' });
   stats.push(
-    { label: 'Active alerts', value: alerts, tone: alerts > 0 ? 'alert' : 'ok' },
-    { label: 'Clippings', value: stories.length },
-    { label: 'Sources live', value: meta.sourcesOk ?? '—', unit: `/ ${meta.sourcesTotal ?? '—'}` },
+    { label: 'clippings', value: stories.length },
+    { label: 'sources live', value: `${meta.sourcesOk ?? '—'}/${meta.sourcesTotal ?? '—'}` },
   );
-  if (!partiallyNew) stats.push({ label: 'Stories scanned', value: meta.itemsFetched ?? '—' });
 
   $('#sitrep-stats').innerHTML = stats
     .map(
       (stat) => `
       <div class="sitrep-stat"${stat.tone ? ` data-tone="${esc(stat.tone)}"` : ''}>
         <dt>${esc(stat.label)}</dt>
-        <dd>${esc(stat.value)}${stat.unit ? `<span class="unit">${esc(stat.unit)}</span>` : ''}</dd>
+        <dd>${esc(stat.value)}</dd>
       </div>`,
     )
     .join('');
-
-  $('#sitrep-cue-text').textContent = partiallyNew
-    ? `Read what's new · ${profile.newCount} of ${stories.length}`
-    : `Read the briefing · ${stories.length} clippings`;
 
   renderWatchLine();
 }
@@ -506,7 +519,7 @@ const TOP_STORIES = 6;
 function compactRow(story) {
   const signal = (story.signals || [])[0];
   return `
-    <li class="row" data-story="${esc(story.id)}" data-read="${isRead(story.id)}" data-new="${isNew(story.id)}">
+    <li class="row" data-story="${esc(story.id)}" data-read="${isRead(story.id)}" data-new="${showsNew(story.id)}">
       <a class="row-title" href="${safeUrl(story.url)}" target="_blank" rel="noopener noreferrer">${esc(story.title)}</a>
       <span class="row-meta">
         ${signal ? `<span class="row-signal">${esc(signal)}</span>` : ''}
@@ -539,10 +552,8 @@ function renderTopicSections(stories) {
   const host = $('#briefing-sections');
   const groups = groupByTopic(stories);
 
-  // Open the largest section on first paint so the pattern is discoverable,
-  // and leave the rest closed - that is the whole point of this layout.
-  if (!state.openSections.size && groups.length) state.openSections.add(groups[0].id);
-
+  // Every section starts closed: the topic names are the overview, and the
+  // band heading says to select one. Opening one is the reader's choice.
   host.innerHTML = groups
     .map((group) => {
       const open = state.openSections.has(group.id);
@@ -593,22 +604,9 @@ function renderBriefing() {
   empty.hidden = true;
 
   const meta = data.meta || {};
-  $('#briefing-count').textContent =
-    `${stories.length} clippings · ${meta.corpusSize ?? '—'} unique stories · ${meta.sourcesOk ?? '—'}/${
-      meta.sourcesTotal ?? '—'
-    } sources`;
-
-  // Compact mode drops the cards entirely: one scannable list, grouped.
-  if (state.density === 'compact') {
-    const listed = state.unreadFilter === 'new' ? stories.filter((story) => isNew(story.id)) : stories;
-    leadHost.innerHTML = '';
-    bandTop.hidden = true;
-    bandTopics.hidden = false;
-    $('.band-head', bandTopics).firstChild.textContent = 'All clippings by topic ';
-    renderTopicSections(listed);
-    updateReadingControls();
-    return;
-  }
+  // The cover already gives the clipping and source counts; this adds only
+  // what it does not say - how much was read to choose them.
+  $('#briefing-count').textContent = meta.corpusSize ? `Chosen from ${meta.corpusSize} unique stories` : '';
 
   // The cover already carries story one, so the feed continues from two
   // rather than printing the same headline twice in a row.
@@ -633,10 +631,7 @@ function renderBriefing() {
   bandTop.hidden = top.length === 0;
 
   bandTopics.hidden = remainder.length === 0;
-  if (remainder.length) {
-    $('.band-head', bandTopics).firstChild.textContent = 'More by topic ';
-    renderTopicSections(remainder);
-  }
+  if (remainder.length) renderTopicSections(remainder);
 
   if (state.unreadFilter === 'new' && !rest.length) {
     empty.hidden = false;
@@ -1455,6 +1450,8 @@ const LOADERS = {
 };
 
 async function showView(name, { force = false } = {}) {
+  // Lets the stylesheet quieten the chrome on the briefing's cover.
+  document.documentElement.dataset.view = name;
   $$('.tab').forEach((tab) => {
     const active = tab.dataset.view === name;
     tab.classList.toggle('is-active', active);
@@ -1628,23 +1625,6 @@ function bindEvents() {
     }
   });
 
-  $('#sitrep-cue').addEventListener('click', () => {
-    $('#feed-toolbar').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-
-  $$('.seg-btn').forEach((button) => {
-    button.addEventListener('click', () => {
-      state.density = button.dataset.density;
-      $$('.seg-btn').forEach((b) => b.classList.toggle('is-active', b === button));
-      try {
-        localStorage.setItem('sentinel-density', state.density);
-      } catch {
-        /* per-visit only if storage is unavailable */
-      }
-      renderBriefing();
-    });
-  });
-
   $('#briefing-sections').addEventListener('click', (event) => {
     const head = event.target.closest('.section-head');
     if (!head) return;
@@ -1752,7 +1732,6 @@ function restoreFx() {
 
 async function boot() {
   restoreFx();
-  restoreDensity();
   bindEvents();
   await restoreExplain();
   $('#briefing-grid').innerHTML = Array.from({ length: 4 }, () => '<div class="skeleton"></div>').join('');

@@ -34,7 +34,6 @@
       </svg>
       <div class="brand-text">
         <h1>SENTINEL<span>FEED</span></h1>
-        <p class="tagline">Cybersecurity intelligence briefing<span class="sep">&middot;</span>rebuilt every 12 hours</p>
       </div>
     </div>
 
@@ -50,22 +49,22 @@
 
   <nav class="tabs" aria-label="Sections">
     <button class="tab is-active" data-view="briefing" aria-current="page">
-      <span class="tab-index">01</span> Briefing
+      Briefing
     </button>
     <button class="tab" data-view="insights">
-      <span class="tab-index">02</span> Insights
+      Insights
     </button>
     <button class="tab" data-view="trends">
-      <span class="tab-index">03</span> Trends
+      Trends
     </button>
     <button class="tab" data-view="search">
-      <span class="tab-index">04</span> Search
+      Search
     </button>
     <button class="tab" data-view="archive">
-      <span class="tab-index">05</span> Archive
+      Archive
     </button>
     <button class="tab" data-view="sources">
-      <span class="tab-index">06</span> Sources
+      Sources
     </button>
     <div class="tabs-spacer"></div>
     <button class="ghost-btn" id="explain-toggle" aria-pressed="false" title="Explain the jargon">
@@ -116,18 +115,9 @@
       <dl class="sitrep-stats" id="sitrep-stats"></dl>
 
       <p class="sitrep-watch" id="sitrep-watch" hidden></p>
-
-      <button class="sitrep-cue" id="sitrep-cue" type="button">
-        <span id="sitrep-cue-text">Read the briefing</span>
-        <span class="sitrep-arrow" aria-hidden="true">↓</span>
-      </button>
     </section>
 
     <div class="toolbar" id="feed-toolbar">
-      <div class="seg" role="group" aria-label="Reading density">
-        <button class="seg-btn is-active" data-density="cards">Cards</button>
-        <button class="seg-btn" data-density="compact">Compact</button>
-      </div>
       <div class="seg" role="group" aria-label="Filter by reading state" id="seg-unread" hidden>
         <button class="seg-btn is-active" data-unread="all">All</button>
         <button class="seg-btn" data-unread="new">New only</button>
