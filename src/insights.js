@@ -61,6 +61,189 @@ function headlineRefs(items, limit = 3) {
 }
 
 /**
+ * Hands out evidence so the page cites the breadth of an edition rather than
+ * its two biggest stories. The strongest stories match almost every theme, so
+ * picking "the top-scored matches" for each section cites the same pair over
+ * and over. Here a story is used once before any story is used twice, never
+ * more than twice, and a theme prefers stories it is the primary theme of.
+ */
+function createEvidencePicker() {
+  const uses = new Map();
+  return function pick(candidates, limit, primaryIds = null) {
+    const isPrimary = (item) => (primaryIds && primaryIds.has(item.themes?.[0]?.id) ? 1 : 0);
+    const ranked = [...candidates].sort((a, b) => isPrimary(b) - isPrimary(a) || b.score - a.score);
+    const chosen = [];
+    for (const allowedUses of [0, 1]) {
+      for (const item of ranked) {
+        if (chosen.length >= limit) break;
+        if (chosen.includes(item) || (uses.get(item.url) || 0) > allowedUses) continue;
+        chosen.push(item);
+      }
+    }
+    for (const item of chosen) uses.set(item.url, (uses.get(item.url) || 0) + 1);
+    return headlineRefs(chosen, limit);
+  };
+}
+
+const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** "A", "A and B", "A, B and C" */
+function listOf(parts) {
+  if (parts.length <= 1) return parts.join('');
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+/** How each urgency signal reads inside a sentence, with its count. */
+const SIGNAL_PHRASES = {
+  'Active exploitation': (n) => `${plural(n, 'story', 'stories')} ${n === 1 ? 'reports' : 'report'} active exploitation`,
+  'Zero-day': (n) => plural(n, 'zero-day'),
+  'CISA KEV': (n) => `${plural(n, 'flaw')} ${n === 1 ? 'was' : 'were'} added to CISA's exploited list`,
+  'Emergency patch': (n) => `${plural(n, 'emergency patch', 'emergency patches')}`,
+  'Critical severity': (n) => `${plural(n, 'critical-severity flaw')}`,
+  'Unauthenticated RCE': (n) => `${plural(n, 'flaw')} ${n === 1 ? 'allows' : 'allow'} remote code execution`,
+  'Large-scale data loss': (n) => `${plural(n, 'large-scale data loss', 'large-scale data losses')}`,
+  Extortion: (n) => `${plural(n, 'story', 'stories')} ${n === 1 ? 'covers' : 'cover'} ransomware or extortion`,
+  'State-linked': (n) => `${plural(n, 'state-linked operation')}`,
+  'Supply chain': (n) => `${plural(n, 'supply-chain compromise')}`,
+  'No fix available': (n) => `${n} with no fix yet`,
+};
+
+/** Signals that, when present, say the edition is urgent. */
+const URGENT = new Set(['Active exploitation', 'Zero-day', 'CISA KEV', 'Emergency patch']);
+
+const KIND_LABEL = {
+  journalism: 'journalism',
+  authority: 'government and vendor advisories',
+  research: 'original research',
+  practitioner: 'practitioner writing',
+};
+
+/**
+ * The overall view: what the whole corpus looks like, not just its top
+ * themes - how broad it is, how urgent, who is reporting it, what is named
+ * in it, and what moved since the last edition.
+ */
+function buildOverview({ items, themes, sourceCount, windowHours, entityTotals, hasPrevious, pick }) {
+  const stories = items.length;
+
+  // Breadth: how many tracked themes appear, and how much the top three carry.
+  const top3Share = Math.round(themes.slice(0, 3).reduce((sum, t) => sum + t.share, 0));
+  const breadthLabel = top3Share >= 55 ? 'concentrated' : top3Share <= 35 ? 'broad' : 'mixed';
+
+  // Who is reporting.
+  const kindCounts = new Map();
+  for (const item of items) {
+    const kind = item.sourceKind || 'journalism';
+    kindCounts.set(kind, (kindCounts.get(kind) || 0) + 1);
+  }
+  const sourceMix = [...kindCounts.entries()]
+    .map(([kind, count]) => ({ kind, count, share: stories ? Math.round((count / stories) * 100) : 0 }))
+    .sort((a, b) => b.count - a.count);
+
+  // How urgent.
+  const signalCounts = new Map();
+  for (const item of items) {
+    for (const signal of item.signals || []) signalCounts.set(signal, (signalCounts.get(signal) || 0) + 1);
+  }
+  const signals = [...signalCounts.entries()]
+    .map(([label, count]) => ({ label, count, urgent: URGENT.has(label) }))
+    .sort((a, b) => b.count - a.count);
+  const urgentStories = items.filter((item) => (item.signals || []).some((sig) => URGENT.has(sig))).length;
+
+  // What moved since the last edition.
+  const moved = (direction) =>
+    themes
+      .filter((t) => t.momentum?.direction === direction)
+      .sort((a, b) => Math.abs(b.momentum.delta) - Math.abs(a.momentum.delta))
+      .slice(0, 3)
+      .map((t) => ({ label: t.label, delta: t.momentum.delta }));
+  const changes = hasPrevious ? { rising: moved('up'), cooling: moved('down') } : { rising: [], cooling: [] };
+
+  // The landscape: every active theme, each with examples of its own.
+  const landscape = themes.map((theme) => ({
+    id: theme.id,
+    label: theme.label,
+    count: theme.count,
+    share: theme.share,
+    examples: pick(theme.matched, 2, new Set([theme.id])),
+  }));
+
+  // ---- the summary, in sentences ----
+  const sentences = [];
+  sentences.push(
+    `This edition reads ${plural(stories, 'story', 'stories')} from ${plural(sourceCount, 'source')} published in the last ${windowHours} hours.`,
+  );
+
+  if (themes.length) {
+    const leaders = listOf(themes.slice(0, 3).map((t) => t.label));
+    sentences.push(
+      breadthLabel === 'concentrated'
+        ? `Coverage is concentrated: ${leaders} carry ${top3Share}% of the weighted signal between them.`
+        : breadthLabel === 'broad'
+          ? `Coverage is broad: ${themes.length} of the tracked themes appear, and even the three largest - ${leaders} - carry only ${top3Share}% of the signal.`
+          : `Coverage is spread across ${themes.length} themes, led by ${leaders} with ${top3Share}% of the signal between them.`,
+    );
+  }
+
+  // Urgent signals lead, then the most common of the rest.
+  const phrased = [...signals]
+    .filter((sig) => SIGNAL_PHRASES[sig.label])
+    .sort((a, b) => Number(b.urgent) - Number(a.urgent) || b.count - a.count)
+    .slice(0, 3)
+    .map((sig) => SIGNAL_PHRASES[sig.label](sig.count));
+  if (phrased.length) {
+    const urgency =
+      urgentStories >= Math.max(3, stories * 0.08)
+        ? 'Urgency is high'
+        : urgentStories > 0
+          ? 'There is real urgency in places'
+          : 'Little of it is urgent';
+    sentences.push(`${urgency}: ${listOf(phrased)}.`);
+  }
+
+  if (sourceMix.length) {
+    const [first, ...rest] = sourceMix;
+    const others = rest.filter((m) => m.share >= 5).map((m) => `${m.share}% ${KIND_LABEL[m.kind] || m.kind}`);
+    sentences.push(
+      `Most of it is ${KIND_LABEL[first.kind] || first.kind} (${first.share}%)${others.length ? `, with ${listOf(others)}` : ''}.`,
+    );
+  }
+
+  if (entityTotals.cves || entityTotals.actors) {
+    const named = [];
+    if (entityTotals.cves) named.push(plural(entityTotals.cves, 'distinct CVE'));
+    if (entityTotals.actors) named.push(plural(entityTotals.actors, 'named threat group'));
+    const cited = [entityTotals.topCve, entityTotals.topActor].filter(Boolean);
+    sentences.push(
+      `${listOf(named)} ${entityTotals.cves + entityTotals.actors === 1 ? 'appears' : 'appear'}${cited.length ? `; the most cited ${cited.length === 1 ? 'is' : 'are'} ${listOf(cited)}` : ''}.`,
+    );
+  }
+
+  if (changes.rising.length || changes.cooling.length) {
+    const fmt = (list) => listOf(list.map((t) => t.label));
+    const parts = [];
+    if (changes.rising.length) parts.push(`${fmt(changes.rising)} ${changes.rising.length === 1 ? 'is' : 'are'} rising`);
+    if (changes.cooling.length) parts.push(`${fmt(changes.cooling)} ${changes.cooling.length === 1 ? 'is' : 'are'} cooling`);
+    sentences.push(`Since the last edition, ${parts.join(', while ')}.`);
+  }
+
+  return {
+    summary: sentences.join(' '),
+    sentences,
+    stories,
+    sources: sourceCount,
+    windowHours,
+    breadth: { label: breadthLabel, matched: themes.length, tracked: THEMES.length, top3Share },
+    urgentStories,
+    signals,
+    sourceMix,
+    entities: entityTotals,
+    changes,
+    landscape,
+  };
+}
+
+/**
  * Groups that are routinely written more than one way. Counting "Clop" and
  * "Cl0p" as two actors would overstate both.
  */
@@ -103,10 +286,18 @@ function extractEntities(items) {
     }
   }
 
-  const rank = (map) => [...map.values()].sort((a, b) => b.count - a.count || a.count - b.count);
+  const rank = (map) => [...map.values()].sort((a, b) => b.count - a.count);
+  const rankedCves = rank(cves);
+  const rankedActors = rank(actors);
   return {
-    cves: rank(cves).slice(0, 8),
-    actors: rank(actors).slice(0, 8),
+    cves: rankedCves.slice(0, 8),
+    actors: rankedActors.slice(0, 8),
+    totals: {
+      cves: cves.size,
+      actors: actors.size,
+      topCve: rankedCves[0] && rankedCves[0].count > 1 ? `${rankedCves[0].id} (${plural(rankedCves[0].count, 'story', 'stories')})` : null,
+      topActor: rankedActors[0] && rankedActors[0].count > 1 ? `${rankedActors[0].name} (${plural(rankedActors[0].count, 'story', 'stories')})` : null,
+    },
   };
 }
 
@@ -138,6 +329,7 @@ export function buildInsights(items, { previousShares = {}, windowHours = 12, so
       mindset: theme.mindset,
       skills: theme.skills,
       headlines: headlineRefs(matched, 3),
+      matched,
     });
   }
 
@@ -164,29 +356,48 @@ export function buildInsights(items, { previousShares = {}, windowHours = 12, so
   const top = themes.slice(0, 4);
   const strongIds = new Set(themes.slice(0, 8).filter((t) => t.count >= 2).map((t) => t.id));
 
+  // Evidence is allocated in page order, so the overview's landscape gets
+  // first claim on each theme's own stories and later sections draw on the
+  // rest of the edition instead of repeating them.
+  const pick = createEvidencePicker();
+  const entities = extractEntities(items);
+  const overview = buildOverview({
+    items,
+    themes,
+    sourceCount,
+    windowHours,
+    entityTotals: entities.totals,
+    hasPrevious: Object.keys(previousShares).length > 0,
+    pick,
+  });
+
   const convergences = CONVERGENCES.filter((c) => c.when.every((id) => strongIds.has(id)))
     .slice(0, 3)
     .map((c) => ({
       text: c.text,
       themes: c.when.map((id) => THEME_BY_ID.get(id)?.label).filter(Boolean),
-      headlines: headlineRefs(
-        items
-          .filter((item) => c.when.some((id) => (item.themes || []).some((t) => t.id === id)))
-          .sort((a, b) => b.score - a.score),
+      // A convergence is about stories carrying both themes at once.
+      headlines: pick(
+        items.filter((item) => c.when.every((id) => (item.themes || []).some((t) => t.id === id))).length
+          ? items.filter((item) => c.when.every((id) => (item.themes || []).some((t) => t.id === id)))
+          : items.filter((item) => c.when.some((id) => (item.themes || []).some((t) => t.id === id))),
         2,
+        new Set(c.when),
       ),
     }));
 
   // ---- Outlook narrative -------------------------------------------------
-  const lede = top.length
-    ? `Across ${items.length} stories drawn from ${sourceCount} sources in the last ${windowHours} hours, coverage concentrates on ${top[0].label} (${top[0].share}% of weighted signal)${
-        top[1] ? `, with ${top[1].label}${top[2] ? ` and ${top[2].label}` : ''} close behind` : ''
-      }.`
-    : `No themed signal was detected in the last ${windowHours} hours.`;
+  const lede = top.length ? overview.summary : `No themed signal was detected in the last ${windowHours} hours.`;
 
   const outlook = {
     lede,
-    reading: top.map((theme) => ({ label: theme.label, text: theme.implication, share: theme.share })),
+    reading: top.map((theme) => ({
+      label: theme.label,
+      text: theme.implication,
+      share: theme.share,
+      count: theme.count,
+      headlines: pick(theme.matched, 2, new Set([theme.id])),
+    })),
     horizon: top.slice(0, 3).map((theme) => ({ label: theme.label, text: theme.horizon })),
     convergences,
   };
@@ -228,11 +439,10 @@ export function buildInsights(items, { previousShares = {}, windowHours = 12, so
         practice: skill.practice,
         intensity: Math.round((skill.score / maxSkillScore) * 100),
         drivenBy: drivers.map((d) => d.label),
-        headlines: headlineRefs(
-          items
-            .filter((item) => (item.themes || []).some((t) => driverIds.has(t.id)))
-            .sort((a, b) => b.score - a.score),
+        headlines: pick(
+          items.filter((item) => (item.themes || []).some((t) => driverIds.has(t.id))),
           2,
+          driverIds,
         ),
       };
     });
@@ -243,18 +453,20 @@ export function buildInsights(items, { previousShares = {}, windowHours = 12, so
     themeId: theme.id,
     text: theme.mindset,
     share: theme.share,
-    headlines: theme.headlines.slice(0, 2),
+    headlines: pick(theme.matched, 2, new Set([theme.id])),
   }));
 
   return {
-    themes,
+    // The matched story lists were working state; editions keep the refs.
+    themes: themes.map(({ matched, ...theme }) => theme),
+    overview,
     outlook,
     skills,
     mindsets,
-    entities: extractEntities(items),
+    entities: { cves: entities.cves, actors: entities.actors },
     method: {
       note:
-        'Insights are derived mechanically from this edition\'s stories: each theme is matched by language patterns, weighted by how prominent the matching stories are, and every claim links the headlines that triggered it. Nothing here is a human forecast.',
+        'Insights are derived mechanically from this edition\'s stories: each theme is matched by language patterns, weighted by how prominent the matching stories are, and every claim links the headlines that triggered it. Evidence is spread so that no story is cited twice before every relevant story has been cited once. Nothing here is a human forecast.',
       themesEvaluated: THEMES.length,
       themesMatched: themes.length,
     },

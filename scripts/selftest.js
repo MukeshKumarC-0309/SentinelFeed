@@ -310,6 +310,46 @@ test('derives themes, skills and mindsets only from matched stories', () => {
   }
 });
 
+test('spreads evidence across the edition instead of repeating the top stories', () => {
+  // Two "big" stories that match many themes, plus a field of smaller ones.
+  const big = [
+    'Zero-day actively exploited in VPN appliance by state-sponsored ransomware gang via prompt injection',
+    'Critical RCE in firewall exploited in the wild; espionage group and extortion crew both involved',
+  ];
+  const small = [
+    'Ransomware gang extorts hospital with leak site',
+    'Prompt injection hijacks AI agent in browser',
+    'Espionage campaign targets telecom networks',
+    'Malicious package found in npm registry',
+    'Phishing kit steals session tokens to bypass MFA',
+    'Data breach exposes 2 million customer records',
+    'Researchers publish memory corruption bug class in kernel drivers',
+    'Regulator fines firm over late breach disclosure',
+  ];
+  const items = [...big, ...small].map((title, i) => {
+    const item = story({ title, summary: title, url: `https://example.com/${i}`, sourceKind: i % 2 ? 'authority' : 'journalism' });
+    item.themes = matchThemes(item);
+    return Object.assign(item, scoreItem(item));
+  });
+
+  const insights = buildInsights(items, { sourceCount: 9, windowHours: 72 });
+  const cited = [
+    ...insights.overview.landscape.flatMap((t) => t.examples),
+    ...insights.outlook.reading.flatMap((r) => r.headlines),
+    ...insights.outlook.convergences.flatMap((c) => c.headlines),
+    ...insights.skills.flatMap((s) => s.headlines),
+    ...insights.mindsets.flatMap((m) => m.headlines),
+  ].map((h) => h.url);
+  const uses = {};
+  for (const url of cited) uses[url] = (uses[url] || 0) + 1;
+
+  assert.ok(Math.max(...Object.values(uses)) <= 2, 'no story is cited more than twice');
+  assert.ok(Object.keys(uses).length >= 6, `cites the breadth of the edition (${Object.keys(uses).length} stories)`);
+  assert.ok(insights.overview.summary.includes('9 sources'));
+  assert.ok(insights.overview.sourceMix.length === 2);
+  assert.ok(!('matched' in insights.themes[0]), 'working state is not persisted');
+});
+
 test('reports momentum against the previous edition', () => {
   const items = [story({ title: 'Ransomware attack halts production', summary: 'Extortion demand followed encryption of systems.' })].map((item) => {
     item.themes = matchThemes(item);
