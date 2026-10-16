@@ -98,7 +98,7 @@ const pctLabel = (value) => `${Number(value).toFixed(1)}%`;
 
 function evidenceList(headlines, label = 'Evidence') {
   if (!headlines?.length) return '';
-  return `<div class="evidence"><span class="evidence-label">${esc(label)}</span>${headlines
+  return `<div class="evidence">${label ? `<span class="evidence-label">${esc(label)}</span>` : ''}${headlines
     .map(
       (h) =>
         `<a href="${safeUrl(h.url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)}<span class="n"> — ${esc(
@@ -643,6 +643,74 @@ function renderBriefing() {
 
 /* ---- rendering: insights --------------------------------------------- */
 
+const KIND_NAMES = {
+  journalism: 'journalism',
+  authority: 'advisories',
+  research: 'research',
+  practitioner: 'practitioners',
+};
+
+/** Four short readings of the whole edition: breadth, urgency, voices, names. */
+function overviewFacts(overview) {
+  const facts = [
+    {
+      label: 'Breadth',
+      value: `${overview.breadth.matched} of ${overview.breadth.tracked} themes`,
+      note: `${overview.breadth.label} · top three ${overview.breadth.top3Share}%`,
+    },
+    {
+      label: 'Urgent',
+      value: `${overview.urgentStories} ${overview.urgentStories === 1 ? 'story' : 'stories'}`,
+      note: 'exploited, zero-day, KEV or emergency patch',
+      tone: overview.urgentStories ? 'alert' : '',
+    },
+    {
+      label: 'Who is reporting',
+      value: overview.sourceMix
+        .slice(0, 3)
+        .map((m) => `${m.share}% ${KIND_NAMES[m.kind] || m.kind}`)
+        .join(' · '),
+      note: `${overview.sources} sources`,
+    },
+    {
+      label: 'Named',
+      value: `${overview.entities.cves} CVEs · ${overview.entities.actors} groups`,
+      note: overview.entities.topCve ? `most cited ${overview.entities.topCve}` : 'across the edition',
+    },
+  ];
+  return `<dl class="facts">${facts
+    .map(
+      (fact) => `
+      <div class="fact"${fact.tone ? ` data-tone="${fact.tone}"` : ''}>
+        <dt>${esc(fact.label)}</dt>
+        <dd>${esc(fact.value)}</dd>
+        <dd class="fact-note">${esc(fact.note)}</dd>
+      </div>`,
+    )
+    .join('')}</dl>`;
+}
+
+/**
+ * Show the first `visible` items, and fold the rest behind a "show more"
+ * the reader opens when they want it. `wrap` puts each group in the same
+ * container so a grid keeps its columns either side of the fold.
+ */
+function showSome(items, visible, render, moreLabel, wrap = (html) => html) {
+  const shown = items.slice(0, visible);
+  const rest = items.slice(visible);
+  return `${wrap(shown.map(render).join(''))}${
+    rest.length
+      ? `<details class="more"><summary>${esc(moreLabel(rest.length))}</summary>${wrap(rest.map(render).join(''))}</details>`
+      : ''
+  }`;
+}
+
+/** A story's sources, tucked behind a small toggle until asked for. */
+function sourcesToggle(headlines, label = 'Sources') {
+  if (!headlines?.length) return '';
+  return `<details class="reveal"><summary>${esc(label)} (${headlines.length})</summary>${evidenceList(headlines, '')}</details>`;
+}
+
 function renderInsights() {
   const data = state.briefing;
   const host = $('#insights-body');
@@ -654,166 +722,174 @@ function renderInsights() {
     return;
   }
 
-  const { outlook, themes, skills, mindsets, entities, method } = insights;
-  const maxShare = Math.max(...themes.map((t) => t.share), 1);
+  // Insights is the reading of this one edition, in words; the numbers over
+  // time live in Trends. Each section leads with its essentials and folds
+  // the rest away, so the page reads in a minute and goes deep on request.
+  const { outlook, skills, mindsets, method } = insights;
+  // Editions built before the overview existed simply go without it.
+  const overview = insights.overview;
 
-  const trendMark = (momentum) => {
-    if (!momentum || momentum.direction === 'new') return '<span class="trend" data-dir="new">new</span>';
-    const arrow = momentum.direction === 'up' ? '▲' : momentum.direction === 'down' ? '▼' : '=';
-    const delta = momentum.delta > 0 ? `+${momentum.delta}` : `${momentum.delta}`;
-    return `<span class="trend" data-dir="${esc(momentum.direction)}" title="Change in share since the previous edition">${arrow} ${esc(
-      delta,
-    )}</span>`;
-  };
+  // The summary opens on two sentences; the rest is one click away.
+  const sentences = overview?.sentences || outlook.lede.split(/(?<=\.)\s+(?=[A-Z0-9])/);
+  const opening = sentences.slice(0, 2).join(' ');
+  const remainder = sentences.slice(2).join(' ');
+
+  const sections = [
+    { id: 'insights-landscape', label: 'The whole edition', show: overview?.landscape?.length },
+    { id: 'insights-reading', label: 'What it tells us', show: outlook.reading?.length },
+    { id: 'insights-horizon', label: 'What may come next', show: outlook.horizon?.length },
+    { id: 'insights-skills', label: 'Skills to build', show: skills?.length },
+    { id: 'insights-mindsets', label: 'How to think about it', show: mindsets?.length },
+  ].filter((section) => section.show);
+
+  const grid = (html) => `<div class="grid-2">${html}</div>`;
+  const landGrid = (html) => `<div class="landscape">${html}</div>`;
 
   host.innerHTML = `
-    <section class="panel">
-      <div class="panel-head"><h3>Where the signal is</h3><span class="hint">weighted by story prominence</span></div>
-      <p class="lede">${esc(outlook.lede)}</p>
-      <div style="margin-top:18px">
-        ${themes
-          .slice(0, 10)
-          .map(
-            (theme) => `
-          <div class="signal-row">
-            <div class="signal-name">${esc(theme.label)}<span class="count">${theme.count} ${
-              theme.count === 1 ? 'story' : 'stories'
-            }</span></div>
-            <div class="bar"><div class="bar-fill" style="width:${Math.round((theme.share / maxShare) * 100)}%"></div></div>
-            <div class="signal-meta">${pctLabel(theme.share)}${trendMark(theme.momentum)}</div>
-          </div>`,
-          )
-          .join('')}
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><h3>What this edition is telling us</h3></div>
-      <div class="grid-2">
-        ${outlook.reading
-          .map(
-            (item) => `
-          <div class="mini">
-            <div class="mini-label">${esc(item.label)}<span class="share">${pctLabel(item.share)}</span></div>
-            <p>${esc(item.text)}</p>
-          </div>`,
-          )
-          .join('')}
-      </div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><h3>What the future could look like</h3><span class="hint">extrapolated from the dominant themes</span></div>
-      <div class="grid-2">
-        ${outlook.horizon
-          .map(
-            (item) => `
-          <div class="mini">
-            <div class="mini-label">${esc(item.label)}</div>
-            <p>${esc(item.text)}</p>
-          </div>`,
-          )
-          .join('')}
-      </div>
+    <section class="brief">
+      <p class="brief-label">In brief</p>
+      <p class="lede">${annotate(esc(opening))}</p>
       ${
-        outlook.convergences?.length
-          ? `<div style="margin-top:16px">
-              <div class="panel-head" style="margin-bottom:10px"><h3>Where themes converge</h3></div>
-              ${outlook.convergences
-                .map(
-                  (c) => `
-                <div class="mini" style="border-left-color:var(--violet);margin-bottom:10px">
-                  <div class="mini-label" style="color:var(--violet)">${c.themes.map(esc).join(' + ')}</div>
-                  <p>${esc(c.text)}</p>
-                  ${evidenceList(c.headlines, 'Driven by')}
-                </div>`,
-                )
-                .join('')}
-            </div>`
+        remainder
+          ? `<details class="more more-text"><summary>Read the full summary</summary><p class="prose">${annotate(
+              esc(remainder),
+            )}</p></details>`
           : ''
       }
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><h3>Skills in demand</h3><span class="hint">ranked by the weight of the themes driving them</span></div>
-      ${skills
-        .map(
-          (skill, index) => `
-        <div class="skill">
-          <div class="skill-top">
-            <span class="skill-rank">${String(index + 1).padStart(2, '0')}</span>
-            <span class="skill-name">${esc(skill.label)}</span>
-            <div class="skill-bar bar"><div class="bar-fill" data-tone="skill" style="width:${Math.max(
-              6,
-              skill.intensity,
-            )}%"></div></div>
-          </div>
-          <p class="skill-why">${esc(skill.demandDriver)}</p>
-          <div class="skill-practice"><strong>How to build it</strong>${esc(skill.practice)}</div>
-          <div class="evidence">
-            <span class="evidence-label">Driven by</span>
-            <span>${skill.drivenBy.map(esc).join(' · ')}</span>
-          </div>
-          ${evidenceList(skill.headlines, 'Seen in')}
-        </div>`,
-        )
-        .join('')}
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><h3>Thinking the industry is encouraging</h3></div>
-      <div class="grid-2">
-        ${mindsets
-          .map(
-            (mindset) => `
-          <div class="mini" style="border-left-color:var(--ok)">
-            <div class="mini-label" style="color:var(--ok)">${esc(mindset.theme)}</div>
-            <p>${esc(mindset.text)}</p>
-            ${evidenceList(mindset.headlines, 'From')}
-          </div>`,
-          )
+      ${overview ? overviewFacts(overview) : ''}
+      <nav class="jump" aria-label="On this page">
+        ${sections
+          .map((section) => `<button type="button" class="jump-link" data-jump="${section.id}">${esc(section.label)}</button>`)
           .join('')}
-      </div>
+        <button type="button" class="jump-link jump-out" data-goto="trends">Trends over time &rarr;</button>
+      </nav>
     </section>
 
     ${
-      entities.cves?.length || entities.actors?.length
-        ? `<section class="panel">
-            <div class="panel-head"><h3>Watchlist</h3><span class="hint">identifiers recurring across this cycle</span></div>
-            ${
-              entities.cves.length
-                ? `<p class="prose" style="margin-bottom:9px"><strong style="color:var(--text-2)">Vulnerabilities</strong></p>
-                   <div class="pill-row" style="margin-bottom:16px">${entities.cves
-                     .map(
-                       (cve) =>
-                         `<a class="pill" href="${safeUrl(cve.items[0]?.url)}" target="_blank" rel="noopener noreferrer"><b>${esc(
-                           cve.id,
-                         )}</b><span class="n">${cve.count}×</span></a>`,
-                     )
-                     .join('')}</div>`
-                : ''
-            }
-            ${
-              entities.actors.length
-                ? `<p class="prose" style="margin-bottom:9px"><strong style="color:var(--text-2)">Named actors &amp; malware</strong></p>
-                   <div class="pill-row">${entities.actors
-                     .map(
-                       (actor) =>
-                         `<a class="pill" href="${safeUrl(actor.items[0]?.url)}" target="_blank" rel="noopener noreferrer"><b>${esc(
-                           actor.name,
-                         )}</b><span class="n">${actor.count}×</span></a>`,
-                     )
-                     .join('')}</div>`
-                : ''
-            }
+      overview?.landscape?.length
+        ? `<section class="panel" id="insights-landscape">
+            <div class="panel-head"><h3>The whole edition</h3><span class="hint">${overview.landscape.length} themes, largest first</span></div>
+            ${showSome(
+              overview.landscape,
+              6,
+              (theme) => {
+                const example = theme.examples[0];
+                return `
+                <div class="land">
+                  <div class="land-head">
+                    <span class="land-name">${esc(theme.label)}</span>
+                    <span class="land-count">${theme.count} ${theme.count === 1 ? 'story' : 'stories'}</span>
+                  </div>
+                  ${
+                    example
+                      ? `<a class="land-example" href="${safeUrl(example.url)}" target="_blank" rel="noopener noreferrer">${esc(
+                          example.title,
+                        )}<span class="land-src">${esc(example.source)}</span></a>`
+                      : ''
+                  }
+                </div>`;
+              },
+              (n) => `Show all ${overview.landscape.length} themes (${n} more)`,
+              landGrid,
+            )}
           </section>`
         : ''
     }
 
-    <p class="method-note"><strong>Method.</strong> ${esc(method.note)} ${esc(
-      method.themesMatched,
-    )} of ${esc(method.themesEvaluated)} tracked themes matched this edition. Momentum compares each theme's
-    share against the previous edition.</p>`;
+    <section class="panel" id="insights-reading">
+      <div class="panel-head"><h3>What this edition is telling us</h3><span class="hint">the leading themes</span></div>
+      ${grid(
+        outlook.reading
+          .map(
+            (item) => `
+          <div class="mini">
+            <div class="mini-label">${esc(item.label)}<span class="share">${pctLabel(item.share)}</span></div>
+            <p>${annotate(esc(item.text))}</p>
+            ${sourcesToggle(item.headlines)}
+          </div>`,
+          )
+          .join(''),
+      )}
+    </section>
+
+    <section class="panel" id="insights-horizon">
+      <div class="panel-head"><h3>What may come next</h3><span class="hint">extrapolated from the leading themes</span></div>
+      ${grid(
+        outlook.horizon
+          .map(
+            (item) => `
+          <div class="mini">
+            <div class="mini-label">${esc(item.label)}</div>
+            <p>${annotate(esc(item.text))}</p>
+          </div>`,
+          )
+          .join(''),
+      )}
+      ${
+        outlook.convergences?.length
+          ? `<details class="more"><summary>Where themes converge (${outlook.convergences.length})</summary>
+              ${outlook.convergences
+                .map(
+                  (c) => `
+                <div class="mini" data-tone="converge">
+                  <div class="mini-label">${c.themes.map(esc).join(' + ')}</div>
+                  <p>${annotate(esc(c.text))}</p>
+                  ${sourcesToggle(c.headlines)}
+                </div>`,
+                )
+                .join('')}
+            </details>`
+          : ''
+      }
+    </section>
+
+    <section class="panel" id="insights-skills">
+      <div class="panel-head"><h3>Skills to build</h3><span class="hint">most needed first</span></div>
+      ${showSome(
+        skills.map((skill, index) => ({ skill, index })),
+        3,
+        ({ skill, index }) => `
+        <div class="skill">
+          <div class="skill-top">
+            <span class="skill-rank">${String(index + 1).padStart(2, '0')}</span>
+            <span class="skill-name">${esc(skill.label)}</span>
+          </div>
+          <p class="skill-why">${annotate(esc(skill.demandDriver))}</p>
+          <details class="reveal"><summary>How to build it</summary>
+            <div class="skill-practice">${annotate(esc(skill.practice))}</div>
+            <div class="evidence">
+              <span class="evidence-label">Driven by</span>
+              <span>${skill.drivenBy.map(esc).join(' · ')}</span>
+            </div>
+            ${evidenceList(skill.headlines, 'Seen in')}
+          </details>
+        </div>`,
+        (n) => `Show ${n} more ${n === 1 ? 'skill' : 'skills'}`,
+      )}
+    </section>
+
+    <section class="panel" id="insights-mindsets">
+      <div class="panel-head"><h3>How to think about it</h3><span class="hint">the thinking the industry is encouraging</span></div>
+      ${showSome(
+        mindsets,
+        2,
+        (mindset) => `
+          <div class="mini" data-tone="mindset">
+            <div class="mini-label">${esc(mindset.theme)}</div>
+            <p>${annotate(esc(mindset.text))}</p>
+            ${sourcesToggle(mindset.headlines)}
+          </div>`,
+        (n) => `Show ${n} more`,
+        grid,
+      )}
+    </section>
+
+    <details class="more method"><summary>How these insights are made</summary>
+      <p class="method-note">${esc(method.note)} ${esc(method.themesMatched)} of ${esc(
+        method.themesEvaluated,
+      )} tracked themes matched this edition. For how each theme, skill and named vulnerability or
+      actor moves across editions, see Trends.</p>
+    </details>`;
 }
 
 /* ---- rendering: trends ------------------------------------------------ */
@@ -947,7 +1023,7 @@ function renderTrends() {
              (story) =>
                `<li><a href="${safeUrl(story.url)}" target="_blank" rel="noopener noreferrer">${esc(
                  story.title,
-               )}</a> <span class="mono" style="color:var(--faint);font-size:.8em">${esc(story.source)} · ${esc(
+               )}</a> <span class="entity-source">${esc(story.source)} · ${esc(
                  formatStamp(story.publishedAt),
                )}</span></li>`,
            )
@@ -1172,7 +1248,7 @@ function renderWeekly() {
 
       ${
         data.cves.length
-          ? `<p class="prose" style="margin-top:16px"><strong style="color:var(--text-2)">Vulnerabilities that stayed in the news</strong></p>
+          ? `<h4 class="subsection-head">Vulnerabilities that stayed in the news</h4>
              <div class="pill-row" style="margin-top:9px">${data.cves
                .map(
                  (c) =>
@@ -1297,7 +1373,7 @@ function renderSources() {
       if (!group.length) return '';
       return `
         <div class="source-group">
-          <h3>${esc(title)} <span style="color:var(--faint)">(${group.length})</span></h3>
+          <h3>${esc(title)} <span class="source-count">${group.length}</span></h3>
           <div class="source-list">
             ${group
               .map(
@@ -1579,6 +1655,21 @@ function bindEvents() {
     if (state.explain) await loadGlossary();
     else closeTermPop();
     renderBriefing();
+    if (state.loadedViews.has('insights')) renderInsights();
+  });
+
+  // Insights: the in-page jump bar, and its hand-off to Trends.
+  $('#insights-body').addEventListener('click', (event) => {
+    const jump = event.target.closest('[data-jump]');
+    if (jump) {
+      document.getElementById(jump.dataset.jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    const goto = event.target.closest('[data-goto]');
+    if (goto) {
+      showView(goto.dataset.goto);
+      window.scrollTo({ top: 0 });
+    }
   });
 
   const easiestBtn = $('#easiest-first');

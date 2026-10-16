@@ -1114,24 +1114,169 @@ html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
   letter-spacing: 0.16px;
 }
 
-/* Signal bars */
-.signal-row {
-  display: grid;
-  grid-template-columns: minmax(180px, 260px) 1fr 96px;
-  align-items: center;
-  gap: var(--sp-05);
-  padding: var(--sp-04) 0;
-  border-bottom: 1px solid var(--border-subtle-01);
+/* ---- Insights: in brief, and a jump bar into the page ----------------- */
+.brief {
+  margin-bottom: var(--sp-07);
 }
-.signal-row:last-child { border-bottom: 0; }
 
-.signal-name { font-size: 14px; letter-spacing: 0.16px; color: var(--text-primary); }
-.signal-name .count {
-  color: var(--text-helper);
-  font-family: var(--mono);
+.brief-label {
   font-size: 12px;
-  margin-left: var(--sp-03);
+  line-height: 16px;
+  letter-spacing: 0.32px;
+  color: var(--text-helper);
+  margin-bottom: var(--sp-03);
 }
+
+.brief .lede { max-width: 72ch; }
+
+/* Ghost links in a row, Carbon's "table of contents" in horizontal form. */
+.jump {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-02);
+  margin-top: var(--sp-06);
+  padding-top: var(--sp-05);
+  border-top: 1px solid var(--border-subtle-00);
+}
+
+.jump-link {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--link-primary);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 18px;
+  letter-spacing: 0.16px;
+  height: 32px;
+  padding: 0 var(--sp-04);
+  cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.jump-link:first-child { margin-left: calc(-1 * var(--sp-04)); }
+.jump-link:hover { background: var(--background-hover); color: var(--link-primary-hover); }
+.jump-out { margin-left: auto; color: var(--text-secondary); }
+.jump-out:hover { color: var(--text-primary); }
+
+/* Facts: four short readings of the whole edition, under the summary. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-05) var(--sp-06);
+  margin: var(--sp-06) 0 0;
+}
+.fact { margin: 0; padding-left: var(--sp-04); box-shadow: inset 2px 0 0 var(--border-strong-01); }
+.fact[data-tone='alert'] { box-shadow: inset 2px 0 0 var(--support-error); }
+.fact dt {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.32px;
+  color: var(--text-helper);
+  margin-bottom: var(--sp-02);
+}
+.fact dd { margin: 0; font-size: 16px; line-height: 22px; color: var(--text-primary); }
+.fact[data-tone='alert'] dd:not(.fact-note) { color: var(--support-error); }
+.fact .fact-note {
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.32px;
+  color: var(--text-helper);
+  margin-top: var(--sp-01);
+}
+
+/* Progressive disclosure. "More" folds a section's tail away; "reveal" hides
+   one item's sources or detail. Both are native <details>, so they work by
+   keyboard and screen reader without script. */
+details.more { margin-top: var(--sp-04); }
+details.more > summary,
+details.reveal > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-02);
+  list-style: none;
+  cursor: pointer;
+  color: var(--link-primary);
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.16px;
+  border-radius: var(--radius-control);
+}
+details.more > summary::-webkit-details-marker,
+details.reveal > summary::-webkit-details-marker { display: none; }
+details.more > summary { padding: var(--sp-02) var(--sp-03); margin-left: calc(-1 * var(--sp-03)); }
+details.more > summary:hover,
+details.reveal > summary:hover { color: var(--link-primary-hover); background: var(--background-hover); }
+details.more > summary::after,
+details.reveal > summary::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z'/%3E%3C/svg%3E") center / 14px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z'/%3E%3C/svg%3E") center / 14px no-repeat;
+  transition: transform var(--fast) var(--ease);
+}
+details[open] > summary::after { transform: rotate(180deg); }
+details.more[open] > summary { margin-bottom: var(--sp-04); }
+details.more > .grid-2,
+details.more > .landscape,
+details.more > .mini + .mini { margin-top: 0; }
+details.more > .mini + .mini { margin-top: var(--sp-03); }
+details.more-text { margin-top: var(--sp-03); }
+details.more-text .prose { max-width: 72ch; }
+details.reveal { margin-top: var(--sp-03); }
+details.reveal > summary { font-size: 12px; letter-spacing: 0.32px; padding: 0 var(--sp-02); margin-left: calc(-1 * var(--sp-02)); }
+details.reveal[open] > summary { margin-bottom: var(--sp-02); }
+details.reveal .evidence { margin-top: var(--sp-02); }
+details.method { margin-top: var(--sp-06); }
+details.method .method-note { border-top: 0; padding-top: 0; margin-top: 0; }
+
+/* The whole edition: every theme, each with stories of its own. */
+.landscape {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--sp-03) var(--sp-07);
+}
+.land {
+  padding: var(--sp-04) 0;
+  border-top: 1px solid var(--border-subtle-01);
+}
+.land-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-04);
+  margin-bottom: var(--sp-03);
+}
+.land-name { font-size: 14px; font-weight: 600; letter-spacing: 0.16px; color: var(--text-primary); }
+.land-count { font-family: var(--mono); font-size: 12px; color: var(--text-helper); white-space: nowrap; }
+.land-example {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.16px;
+  color: var(--text-secondary);
+}
+.land-example:hover { color: var(--link-primary-hover); text-decoration: none; }
+.land-src { font-size: 12px; color: var(--text-helper); margin-left: var(--sp-03); white-space: nowrap; }
+
+/* Jumped-to panels clear the sticky header instead of hiding under it. */
+#insights-body .panel { scroll-margin-top: 136px; }
+
+.subsection { margin-top: var(--sp-06); }
+.subsection-head {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--sp-04);
+}
+.subsection .mini + .mini { margin-top: var(--sp-03); }
+
+/* A thin rail says what kind of reading a tile is. */
+.mini[data-tone='converge'] { box-shadow: inset 3px 0 0 var(--tag-purple-bd); }
+.mini[data-tone='mindset'] { box-shadow: inset 3px 0 0 var(--support-success); }
 
 /* Carbon progress bar: 8px track, square ends. */
 .bar {
@@ -1139,7 +1284,6 @@ html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
   background: var(--layer-03);
   overflow: hidden;
 }
-.mini .bar, .skill .bar { background: var(--layer-03); }
 .bar-fill {
   height: 100%;
   background: var(--viz-blue);
@@ -1147,26 +1291,13 @@ html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
 }
 .bar-fill[data-tone='skill'] { background: var(--viz-teal); }
 
-.signal-meta {
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--text-secondary);
-  text-align: right;
-  white-space: nowrap;
-}
-
-.trend { font-size: 12px; margin-left: var(--sp-02); }
-.trend[data-dir='up'] { color: var(--support-error); }
-.trend[data-dir='down'] { color: var(--support-success); }
-.trend[data-dir='flat'] { color: var(--text-helper); }
-.trend[data-dir='new'] { color: var(--link-primary); }
-
 /* Skills */
 .skill {
   background: var(--layer-02);
   padding: var(--sp-05);
   margin-bottom: var(--sp-03);
 }
+.skill .skill-practice { margin-top: 0; }
 
 .skill-top {
   display: flex;
@@ -1184,8 +1315,6 @@ html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
 }
 
 .skill-name { font-weight: 600; font-size: 16px; line-height: 22px; color: var(--text-primary); }
-
-.skill-bar { flex: 1; min-width: 110px; max-width: 220px; margin-left: auto; }
 
 .skill-why {
   color: var(--text-secondary);
@@ -1516,6 +1645,7 @@ html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
   color: var(--text-primary);
   margin-bottom: var(--sp-02);
 }
+.entity-source { font-family: var(--mono); font-size: 12px; color: var(--text-helper); }
 .entity-detail .when { font-size: 12px; letter-spacing: 0.32px; color: var(--text-helper); margin-bottom: var(--sp-04); }
 .entity-detail ol { margin: 0; padding-left: var(--sp-06); color: var(--text-secondary); font-size: 14px; line-height: 24px; }
 .entity-detail a { color: var(--text-primary); }
@@ -1588,6 +1718,13 @@ html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--sp-04);
+}
+.source-count {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-helper);
+  margin-left: var(--sp-02);
 }
 
 .source-list {
@@ -1900,12 +2037,14 @@ code.block {
   .band-hint { display: none; }
   .toolbar { gap: var(--sp-04); }
 
-  .signal-row, .trend-row, .skill-row { grid-template-columns: 1fr; gap: var(--sp-03); }
-  .signal-meta, .trend-meta { text-align: left; }
+  .trend-row, .skill-row { grid-template-columns: 1fr; gap: var(--sp-03); }
+  .trend-meta { text-align: left; }
   .skill-row-meta { justify-content: flex-start; }
-  .skill-bar { max-width: none; margin-left: 0; width: 100%; }
 
   .search-bar { flex-direction: column; align-items: stretch; }
+  .jump-out { margin-left: calc(-1 * var(--sp-04)); }
+  .brief .lede { font-size: 16px; line-height: 24px; }
+  .landscape { grid-template-columns: 1fr; }
   .field, .field input, .field select, .primary-btn { width: 100%; min-width: 0; }
   .ledger .recent { display: none; }
   .ledger th, .ledger td { padding-left: var(--sp-04); padding-right: var(--sp-04); }
