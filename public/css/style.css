@@ -889,10 +889,30 @@ html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
 .also-more { color: var(--text-helper); cursor: default; }
 .also a:hover { color: var(--link-primary-hover); }
 
-/* Reading state: what is read recedes, what is new is marked once. */
-.card[data-read='true'] { opacity: 0.55; }
-.card[data-read='true']:hover { opacity: 1; }
-.card[data-read='true'] .card-summary { color: var(--text-helper); }
+/* Reading state. A read story keeps its full contrast - fading it made the
+   news hard to read - and gains a small check mark instead. What is new is
+   marked once, quietly. */
+.read-mark {
+  display: none;
+  align-items: center;
+  gap: var(--sp-02);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.32px;
+  color: var(--text-helper);
+  white-space: nowrap;
+}
+[data-read='true'] .read-mark { display: inline-flex; }
+.read-mark::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  background: var(--support-success);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 10.6L3.4 8l-.7.7L6 12l7.3-7.3-.7-.7z'/%3E%3C/svg%3E") center / 14px no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 10.6L3.4 8l-.7.7L6 12l7.3-7.3-.7-.7z'/%3E%3C/svg%3E") center / 14px no-repeat;
+}
+.card-top .read-mark { margin-left: auto; }
+.card[data-read='true'] .card-time { margin-left: 0; }
 
 .card[data-new='true'] .card-index::before {
   content: 'New';
@@ -1006,8 +1026,6 @@ html:has(#explain-toggle[aria-pressed='true']) .story-grid .card-summary {
 .row-src { color: var(--text-secondary); }
 .row-signal { color: var(--support-error); }
 
-.row[data-read='true'] .row-title { color: var(--text-helper); }
-.row[data-read='true']:hover .row-title { color: var(--link-primary-hover); }
 .row[data-new='true'] .row-title::before {
   content: '';
   display: inline-block;

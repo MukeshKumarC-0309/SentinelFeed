@@ -151,6 +151,7 @@ function storyCard(story, { lead = false, index = 0 } = {}) {
         <span class="chip">${esc(story.sourceName)}</span>
         ${lead ? `<span class="chip chip-kind" data-kind="${esc(story.sourceKind)}">${esc(story.sourceKind)}</span>` : ''}
         ${signals}
+        <span class="read-mark">Read</span>
         <span class="card-time">${esc(timeAgo(story.publishedAt))}</span>
       </div>
       <h3 class="card-title">
@@ -524,6 +525,7 @@ function compactRow(story) {
       <span class="row-meta">
         ${signal ? `<span class="row-signal">${esc(signal)}</span>` : ''}
         <span class="row-src">${esc(story.sourceName)}</span>
+        <span class="read-mark">Read</span>
         <span class="row-time">${esc(timeAgo(story.publishedAt))}</span>
       </span>
     </li>`;
