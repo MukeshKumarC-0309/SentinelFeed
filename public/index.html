@@ -1,22 +1,23 @@
 <!DOCTYPE html>
-<html lang="en" data-fx="on">
+<html lang="en" data-fx="on" data-view="briefing" data-theme="hud">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SENTINEL FEED — Cybersecurity Briefing</title>
 <meta name="description" content="A cybersecurity briefing rebuilt every 12 hours from 113 vetted sources, with derived insights, cross-edition trends and a searchable archive.">
 <meta name="color-scheme" content="dark">
+<script>try{var t=localStorage.getItem('sentinel-theme');if(t==='hud'||t==='signal'||t==='breach')document.documentElement.dataset.theme=t;}catch(e){}</script>
 <link rel="preload" href="/fonts/IBMPlexSans-Regular-Latin1.woff2?v=1" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/css/style.css">
 <link rel="alternate" type="application/rss+xml" title="SENTINEL FEED" href="/feed.xml">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#161616">
+<meta name="theme-color" content="#05080c">
 <link rel="apple-touch-icon" href="/icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Sentinel">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23161616'/%3E%3Cpath d='M16 5l9 3.5v7.2c0 5.6-3.7 9.6-9 11.3-5.3-1.7-9-5.7-9-11.3V8.5L16 5z' fill='none' stroke='%23f4f4f4' stroke-width='2'/%3E%3Cpath d='M11.5 16.2l3.2 3.2 5.8-6' fill='none' stroke='%234589ff' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2305080c'/%3E%3Cpath d='M16 5l9 3.5v7.2c0 5.6-3.7 9.6-9 11.3-5.3-1.7-9-5.7-9-11.3V8.5L16 5z' fill='none' stroke='%23e6f1f8' stroke-width='2'/%3E%3Cpath d='M11.5 16.2l3.2 3.2 5.8-6' fill='none' stroke='%2319d3ff' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E">
 </head>
 <body>
 <div class="fx-layer" aria-hidden="true">
@@ -67,6 +68,14 @@
       Sources
     </button>
     <div class="tabs-spacer"></div>
+    <label class="theme-pick" title="Change the look">
+      <span class="sr-only">Theme</span>
+      <select id="theme-select">
+        <option value="hud">Sentinel HUD</option>
+        <option value="breach">Breach</option>
+        <option value="signal">Signal</option>
+      </select>
+    </label>
     <button class="ghost-btn" id="explain-toggle" aria-pressed="false" title="Explain the jargon">
       <span class="dot-sm"></span> Explain
     </button>

@@ -103,9 +103,9 @@ export function renderIcon(size, { padded = false } = {}) {
   const dim = size * SS;
   const pixels = new Uint8Array(size * size * 4);
 
-  const bg = hex('#161616');
-  const accent = hex('#f4f4f4');
-  const ok = hex('#4589ff');
+  const bg = hex('#05080c');
+  const accent = hex('#e6f1f8');
+  const ok = hex('#19d3ff');
 
   // Geometry in a 0..1 space, then scaled.
   const inset = padded ? 0.26 : 0.16;

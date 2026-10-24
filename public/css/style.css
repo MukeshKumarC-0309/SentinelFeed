@@ -10,7 +10,13 @@
    (@carbon/themes g100, @carbon/type, @carbon/layout, @carbon/motion),
    Apache-2.0, Copyright IBM Corp. Component styles are written for this
    page in Carbon's idiom rather than copied from Carbon's own CSS.
-   Fonts: IBM Plex, SIL Open Font License 1.1 (see /fonts/OFL.txt).
+   Fonts: IBM Plex, Titillium Web and Oxanium, all SIL Open Font License 1.1
+   (see the matching *-OFL.txt files in /fonts/).
+
+   Carbon is the base layer these rules are written against; the page always
+   wears one of three heads-up-display themes on top of it, chosen from the
+   header. Sentinel HUD is the default. Each re-points the same tokens and
+   adds a little decoration of its own - see "Themes" at the end of this file.
    ===================================================================== */
 
 /* ---- Fonts ------------------------------------------------------------ */
@@ -48,6 +54,48 @@
   font-weight: 600;
   font-display: swap;
   src: url('/fonts/IBMPlexMono-SemiBold-Latin1.woff2?v=1') format('woff2');
+}
+@font-face {
+  font-family: 'Titillium Web';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/TitilliumWeb-300-Latin.woff2?v=1') format('woff2');
+}
+@font-face {
+  font-family: 'Titillium Web';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/TitilliumWeb-400-Latin.woff2?v=1') format('woff2');
+}
+@font-face {
+  font-family: 'Titillium Web';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/TitilliumWeb-600-Latin.woff2?v=1') format('woff2');
+}
+@font-face {
+  font-family: 'Oxanium';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Oxanium-400-Latin.woff2?v=1') format('woff2');
+}
+@font-face {
+  font-family: 'Oxanium';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/Oxanium-500-Latin.woff2?v=1') format('woff2');
+}
+@font-face {
+  font-family: 'Oxanium';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Oxanium-600-Latin.woff2?v=1') format('woff2');
 }
 
 /* ---- Tokens: Carbon g100 ---------------------------------------------- */
@@ -135,6 +183,14 @@
   --ease-entrance: cubic-bezier(0, 0, 0.38, 0.9);
   --fast: 110ms;
   --moderate: 240ms;
+
+  /* Shape: Carbon is square; other themes round these. */
+  --radius-tile: 0;
+  --radius-control: 0;
+
+  /* Atmosphere */
+  --fx-grid: rgba(244, 244, 244, 0.028);
+  --header-bg: var(--background);
 
   --max: 1312px;
   --gutter: var(--sp-07);
@@ -224,8 +280,8 @@ a:focus-visible { outline-offset: 1px; }
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(to right, rgba(244, 244, 244, 0.028) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(244, 244, 244, 0.028) 1px, transparent 1px);
+    linear-gradient(to right, var(--fx-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--fx-grid) 1px, transparent 1px);
   background-size: 32px 32px;
   mask-image: linear-gradient(to bottom, #000 0, transparent 70vh);
   -webkit-mask-image: linear-gradient(to bottom, #000 0, transparent 70vh);
@@ -239,7 +295,7 @@ html[data-fx='off'] .pulse { animation: none; }
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--background);
+  background: var(--header-bg);
   border-bottom: 1px solid var(--border-subtle-00);
 }
 
@@ -363,6 +419,27 @@ html[data-fx='off'] .pulse { animation: none; }
 .ghost-btn:active { background: var(--background-selected); }
 .ghost-btn[aria-pressed='true'] { color: var(--text-primary); background: var(--background-selected); }
 .ghost-btn svg { flex: none; }
+
+/* Theme picker: a native select dressed as a ghost button. */
+/* Positioned so its visually hidden label stays inside the scrolling tab
+   row; otherwise it escapes the clip and widens the page on phones. */
+.theme-pick { position: relative; display: inline-flex; margin: auto 0; }
+.theme-pick select {
+  appearance: none;
+  height: 32px;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6l.7-.7L8 9.6l4.3-4.3.7.7z' fill='%23a8a8a8'/%3E%3C/svg%3E") no-repeat right var(--sp-03) center / 14px;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.16px;
+  padding: 0 var(--sp-07) 0 var(--sp-04);
+  cursor: pointer;
+  transition: background-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.theme-pick select:hover { background-color: var(--background-hover); color: var(--text-primary); }
+.theme-pick select option { background: var(--layer-01); color: var(--text-primary); }
 
 /* The toggle state, shown as a small square switch light. */
 .dot-sm {
@@ -2022,11 +2099,477 @@ code.block {
 #fx-toggle[aria-pressed='true'] .dot-sm { background: var(--interactive); }
 #easiest-first[aria-pressed='true'] { background: var(--background-selected); color: var(--text-primary); }
 
-/* ---- Responsive ---------------------------------------------------------------- */
-@media (max-width: 1056px) {
-  .tagline { display: none; }
+/* ---- Shape ---------------------------------------------------------------------- */
+/* One place decides how round things are, so a theme changes two tokens
+   rather than every component. */
+.card, .panel, .mini, .skill, .edition, .source, .empty, .notice, .why,
+.skill-practice, .entity-detail, .sheet, .term-pop, code.block, .skeleton {
+  border-radius: var(--radius-tile);
+}
+.ghost-btn, .field input, .field select, .primary-btn, .jump-link,
+.follow-btn, .copy-btn, .sheet-close, .section-head, .edition-head {
+  border-radius: var(--radius-control);
+}
+.seg { border-radius: var(--radius-control); overflow: hidden; }
+
+/* =====================================================================
+   Themes
+   Three heads-up-display looks. Each re-points Carbon's tokens, then adds a
+   few touches of its own; structure and spacing stay Carbon's.
+   ===================================================================== */
+
+/* ---- Sentinel HUD ------------------------------------------------------------
+   A heads-up-display treatment inspired by augmented-ui (BSD-2-Clause,
+   github.com/propjockey/augmented-ui): clipped corners, accent corner
+   marks, monospace system labels and a cyan signal colour. The geometry is
+   drawn here with clip-path; no augmented-ui code is used. */
+html[data-theme='hud'] {
+  --background: #05080c;
+  --background-hover: rgba(25, 211, 255, 0.08);
+  --background-selected: rgba(25, 211, 255, 0.16);
+  --background-inverse: #19d3ff;
+  --layer-01: #0b1219;
+  --layer-02: #101b25;
+  --layer-03: #1c2e3d;
+  --layer-hover-01: #0f1a24;
+  --layer-hover-02: #16252f;
+  --layer-accent-01: #101b25;
+  --field-01: #081016;
+  --field-02: #0b1219;
+  --skeleton-background: #0b1219;
+  --skeleton-element: #13202b;
+  --border-subtle-00: #15232f;
+  --border-subtle-01: #1f3444;
+  --border-strong-01: #2c4a5e;
+  --border-interactive: #19d3ff;
+  --text-primary: #e6f1f8;
+  --text-secondary: #9fb3c4;
+  --text-helper: #62798b;
+  --text-placeholder: rgba(159, 179, 196, 0.45);
+  --text-inverse: #041016;
+  --icon-secondary: #9fb3c4;
+  --interactive: #19d3ff;
+  --link-primary: #19d3ff;
+  --link-primary-hover: #7fe7ff;
+  --button-primary: #0f8fb0;
+  --button-primary-hover: #12a6cc;
+  --button-primary-active: #0a6c85;
+  --focus: #19d3ff;
+  --highlight: #0b3a4a;
+  --support-error: #ff4d6d;
+  --support-success: #2ef2a0;
+  --support-warning: #ffb020;
+  --support-caution-major: #ff8a3d;
+  --support-info: #19d3ff;
+  --tag-red-bg: rgba(255, 77, 109, 0.12);     --tag-red-fg: #ff7a92;     --tag-red-bd: #ff4d6d;
+  --tag-blue-bg: rgba(25, 211, 255, 0.1);     --tag-blue-fg: #19d3ff;    --tag-blue-bd: #19d3ff;
+  --tag-green-bg: rgba(46, 242, 160, 0.1);    --tag-green-fg: #2ef2a0;   --tag-green-bd: #2ef2a0;
+  --tag-purple-bg: rgba(157, 140, 255, 0.12); --tag-purple-fg: #b3a6ff;  --tag-purple-bd: #9d8cff;
+  --tag-teal-bg: rgba(0, 229, 200, 0.1);      --tag-teal-fg: #4ff0d6;    --tag-teal-bd: #00e5c8;
+  --tag-gray-bg: rgba(159, 179, 196, 0.08);   --tag-gray-fg: #9fb3c4;    --tag-gray-bd: #2c4a5e;
+  --viz-blue: #19d3ff;
+  --viz-teal: #2ef2a0;
+  --radius-tile: 0;
+  --radius-control: 0;
+  --fx-grid: rgba(25, 211, 255, 0.05);
+  --header-bg: rgba(5, 8, 12, 0.9);
+  --cut: 14px;
+}
+html[data-theme='hud'] body {
+  background:
+    radial-gradient(1000px 520px at 50% -12%, rgba(25, 211, 255, 0.1), transparent 65%),
+    var(--background);
+  background-attachment: fixed;
+}
+/* Faint scanlines, removed with the rest of the atmosphere by FX. */
+html[data-theme='hud'] .fx-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to bottom, rgba(230, 241, 248, 0.018) 0 1px, transparent 1px 4px);
+}
+html[data-theme='hud'][data-fx='off'] .fx-layer::after { display: none; }
+html[data-theme='hud'] .masthead { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+/* Clipped corners: top-left and bottom-right, with a lit mark in each. */
+html[data-theme='hud'] .card,
+html[data-theme='hud'] .panel,
+html[data-theme='hud'] .edition,
+html[data-theme='hud'] .sheet {
+  position: relative;
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  box-shadow: inset 0 0 0 1px var(--border-subtle-01);
+}
+html[data-theme='hud'] .card::before,
+html[data-theme='hud'] .card::after,
+html[data-theme='hud'] .panel::before,
+html[data-theme='hud'] .panel::after {
+  content: '';
+  position: absolute;
+  width: var(--cut);
+  height: var(--cut);
+  pointer-events: none;
+  background: linear-gradient(to bottom right, transparent calc(50% - 1px), var(--border-strong-01) calc(50% - 1px), var(--border-strong-01) calc(50% + 1px), transparent calc(50% + 1px));
+  transition: background var(--fast) var(--ease);
+}
+html[data-theme='hud'] .card::before,
+html[data-theme='hud'] .panel::before { top: 0; left: 0; }
+html[data-theme='hud'] .card::after,
+html[data-theme='hud'] .panel::after { bottom: 0; right: 0; }
+html[data-theme='hud'] .card:hover {
+  background: var(--layer-hover-01);
+  box-shadow: inset 0 0 0 1px var(--border-strong-01), inset 0 0 40px rgba(25, 211, 255, 0.05);
+}
+html[data-theme='hud'] .card:hover::before,
+html[data-theme='hud'] .card:hover::after {
+  background: linear-gradient(to bottom right, transparent calc(50% - 1px), var(--interactive) calc(50% - 1px), var(--interactive) calc(50% + 1px), transparent calc(50% + 1px));
 }
 
+/* System labels: monospace, tracked, in the signal colour. */
+html[data-theme='hud'] .band-head,
+html[data-theme='hud'] .panel-head h3,
+html[data-theme='hud'] .subsection-head,
+html[data-theme='hud'] .brief-label,
+html[data-theme='hud'] .source-group h3 {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--interactive);
+}
+html[data-theme='hud'] .view-head h2 {
+  font-family: var(--mono);
+  font-size: 26px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+html[data-theme='hud'] .sitrep-headline { text-shadow: 0 0 28px rgba(25, 211, 255, 0.22); }
+html[data-theme='hud'] .sitrep-stamp,
+html[data-theme='hud'] .tab { font-family: var(--mono); letter-spacing: 0.04em; }
+html[data-theme='hud'] .tab.is-active { box-shadow: inset 0 -2px 0 var(--interactive), 0 6px 14px -8px rgba(25, 211, 255, 0.8); }
+html[data-theme='hud'] .chip,
+html[data-theme='hud'] .tag { border-radius: 2px; }
+html[data-theme='hud'] .chip { box-shadow: inset 0 0 0 1px currentColor; }
+html[data-theme='hud'] .chip:not(.chip-kind):not(.chip-signal) { box-shadow: inset 0 0 0 1px var(--border-strong-01); }
+html[data-theme='hud'] .pulse { box-shadow: 0 0 10px rgba(46, 242, 160, 0.8); }
+html[data-theme='hud'] .primary-btn {
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+/* ---- Signal --------------------------------------------------------------------
+   Follows the design language of Arwes, the open-source sci-fi UI framework
+   (MIT, github.com/arwes/arwes). The palette is Arwes's own: every colour is
+   generated from a hue - cyan 180 for primary, yellow 60 for secondary - with
+   its formulas: main = hsl(h, 80+i%, 92.5-9.44i%), text = hsl(h, 40+i%, same),
+   background = hsl(h, 40+i%, 2+2i%). Also borrowed: corner-bracket frames,
+   a dotted background, and Titillium Web with uppercase, tracked titles.
+   Arwes is a React library, so none of its code is used - only its look. */
+html[data-theme='signal'] {
+  --background: hsl(180, 41%, 4%);
+  --background-hover: hsla(180, 81%, 50%, 0.08);
+  --background-selected: hsla(180, 82%, 50%, 0.15);
+  --background-inverse: hsl(180, 82%, 73.6%);
+  --layer-01: hsl(180, 43%, 7%);
+  --layer-02: hsl(180, 44%, 10%);
+  --layer-03: hsl(180, 45%, 15%);
+  --layer-hover-01: hsl(180, 43%, 9%);
+  --layer-hover-02: hsl(180, 44%, 12%);
+  --layer-accent-01: hsl(180, 44%, 10%);
+  --field-01: hsl(180, 42%, 6%);
+  --field-02: hsl(180, 43%, 8%);
+  --skeleton-background: hsl(180, 43%, 7%);
+  --skeleton-element: hsl(180, 44%, 11%);
+  --border-subtle-00: hsl(180, 45%, 12%);
+  --border-subtle-01: hsl(180, 46%, 17%);
+  --border-strong-01: hsl(180, 50%, 26%);
+  --border-interactive: hsl(180, 83%, 64.2%);
+  --text-primary: hsl(180, 41%, 88%);
+  --text-secondary: hsl(180, 42%, 73.6%);
+  --text-helper: hsl(180, 30%, 52%);
+  --text-placeholder: hsla(180, 42%, 73.6%, 0.45);
+  --text-inverse: hsl(180, 41%, 4%);
+  --icon-secondary: hsl(180, 42%, 73.6%);
+  --interactive: hsl(180, 83%, 64.2%);
+  --link-primary: hsl(180, 83%, 64.2%);
+  --link-primary-hover: hsl(180, 81%, 83.1%);
+  --button-primary: hsla(180, 84%, 50%, 0.16);
+  --button-primary-hover: hsla(180, 84%, 50%, 0.26);
+  --button-primary-active: hsla(180, 84%, 50%, 0.34);
+  --text-on-color: hsl(180, 81%, 83.1%);
+  --focus: hsl(60, 83%, 64.2%);
+  --highlight: hsl(180, 60%, 16%);
+  --support-error: hsl(0, 83%, 64.2%);
+  --support-success: hsl(120, 70%, 58%);
+  --support-warning: hsl(40, 83%, 64.2%);
+  --support-caution-major: hsl(20, 83%, 64.2%);
+  --support-info: hsl(220, 83%, 64.2%);
+  /* "New" and the journalism kind take Arwes's yellow secondary. */
+  --tag-red-bg: hsla(0, 80%, 50%, 0.14);     --tag-red-fg: hsl(0, 83%, 72%);      --tag-red-bd: hsl(0, 83%, 64%);
+  --tag-blue-bg: hsla(60, 80%, 50%, 0.12);   --tag-blue-fg: hsl(60, 83%, 64.2%);  --tag-blue-bd: hsl(60, 83%, 64.2%);
+  --tag-green-bg: hsla(120, 80%, 50%, 0.12); --tag-green-fg: hsl(120, 70%, 64%);  --tag-green-bd: hsl(120, 70%, 58%);
+  --tag-purple-bg: hsla(270, 80%, 60%, 0.14); --tag-purple-fg: hsl(270, 83%, 78%); --tag-purple-bd: hsl(270, 83%, 70%);
+  --tag-teal-bg: hsla(180, 80%, 50%, 0.12);  --tag-teal-fg: hsl(180, 83%, 64.2%); --tag-teal-bd: hsl(180, 83%, 64.2%);
+  --tag-gray-bg: hsla(180, 40%, 50%, 0.08);  --tag-gray-fg: hsl(180, 42%, 73.6%); --tag-gray-bd: hsl(180, 50%, 26%);
+  --viz-blue: hsl(180, 83%, 64.2%);
+  --viz-teal: hsl(60, 83%, 64.2%);
+  --radius-tile: 0;
+  --radius-control: 0;
+  --fx-grid: transparent;
+  --header-bg: hsla(180, 41%, 4%, 0.88);
+  --sans: 'Titillium Web', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --frame-corner: hsl(180, 82%, 50%);
+  --frame-len: 16px;
+}
+html[data-theme='signal'] body {
+  background:
+    radial-gradient(1100px 560px at 50% -14%, hsla(180, 82%, 50%, 0.1), transparent 65%),
+    var(--background);
+  background-attachment: fixed;
+}
+/* Arwes's dotted field in place of the grid. */
+html[data-theme='signal'] .fx-grid {
+  background-image: radial-gradient(hsla(180, 82%, 60%, 0.16) 1px, transparent 1.6px);
+  background-size: 24px 24px;
+}
+html[data-theme='signal'] .masthead { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+/* Frames: a faint cyan wash, a hairline edge, and a bracket at each corner. */
+html[data-theme='signal'] .card,
+html[data-theme='signal'] .panel,
+html[data-theme='signal'] .edition,
+html[data-theme='signal'] .sheet {
+  position: relative;
+  background: linear-gradient(180deg, hsla(180, 82%, 50%, 0.05), hsla(180, 82%, 50%, 0.02)), var(--layer-01);
+  box-shadow: inset 0 0 0 1px var(--border-subtle-00);
+}
+html[data-theme='signal'] .card::before,
+html[data-theme='signal'] .panel::before,
+html[data-theme='signal'] .sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--frame-corner), var(--frame-corner)) left top / var(--frame-len) 1px no-repeat,
+    linear-gradient(var(--frame-corner), var(--frame-corner)) left top / 1px var(--frame-len) no-repeat,
+    linear-gradient(var(--frame-corner), var(--frame-corner)) right top / var(--frame-len) 1px no-repeat,
+    linear-gradient(var(--frame-corner), var(--frame-corner)) right top / 1px var(--frame-len) no-repeat,
+    linear-gradient(var(--frame-corner), var(--frame-corner)) left bottom / var(--frame-len) 1px no-repeat,
+    linear-gradient(var(--frame-corner), var(--frame-corner)) left bottom / 1px var(--frame-len) no-repeat,
+    linear-gradient(var(--frame-corner), var(--frame-corner)) right bottom / var(--frame-len) 1px no-repeat,
+    linear-gradient(var(--frame-corner), var(--frame-corner)) right bottom / 1px var(--frame-len) no-repeat;
+  opacity: 0.55;
+  transition: opacity var(--fast) var(--ease);
+}
+html[data-theme='signal'] .card:hover {
+  background: linear-gradient(180deg, hsla(180, 82%, 50%, 0.09), hsla(180, 82%, 50%, 0.03)), var(--layer-hover-01);
+  box-shadow: inset 0 0 0 1px var(--border-subtle-01), 0 0 24px -10px hsla(180, 82%, 50%, 0.5);
+}
+html[data-theme='signal'] .card:hover::before { opacity: 1; }
+
+/* Titles: Titillium, uppercase and tracked, as Arwes sets them. */
+html[data-theme='signal'] .band-head,
+html[data-theme='signal'] .panel-head h3,
+html[data-theme='signal'] .subsection-head,
+html[data-theme='signal'] .brief-label,
+html[data-theme='signal'] .source-group h3,
+html[data-theme='signal'] .view-head h2,
+html[data-theme='signal'] .sheet-head h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--interactive);
+}
+html[data-theme='signal'] .band-head,
+html[data-theme='signal'] .panel-head h3 { font-size: 15px; }
+html[data-theme='signal'] .view-head h2 { font-size: 26px; }
+html[data-theme='signal'] .tab {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 13px;
+  font-weight: 600;
+}
+html[data-theme='signal'] .tab.is-active { box-shadow: inset 0 -2px 0 var(--interactive), 0 6px 14px -8px hsla(180, 82%, 50%, 0.9); }
+html[data-theme='signal'] .sitrep-headline {
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 30px hsla(180, 82%, 50%, 0.25);
+}
+html[data-theme='signal'] .card-title { font-weight: 600; }
+html[data-theme='signal'] .chip,
+html[data-theme='signal'] .tag { border-radius: 0; }
+html[data-theme='signal'] .chip { box-shadow: inset 0 0 0 1px currentColor; }
+html[data-theme='signal'] .chip:not(.chip-kind):not(.chip-signal) { box-shadow: inset 0 0 0 1px var(--border-strong-01); }
+
+/* Buttons are frames too: an outlined, washed rectangle in the signal colour. */
+html[data-theme='signal'] .primary-btn {
+  box-shadow: inset 0 0 0 1px var(--interactive);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+html[data-theme='signal'] .pulse { box-shadow: 0 0 10px hsla(120, 70%, 58%, 0.8); }
+
+/* ---- Breach --------------------------------------------------------------------
+   After cyberpunk-css (MIT, github.com/alddesign/cyberpunk-css), a library
+   styled on a game's in-world interface. From it: the palette - signal yellow
+   #f8ef02, red #ff003c, cyan #00ffd2 on black - the tile shape that cuts the
+   top-right and bottom-left corners, the notched button, and the Oxanium
+   display face. Its own CSS is not used; reading text stays in Plex Sans. */
+html[data-theme='breach'] {
+  --background: #0a0a0c;
+  --background-hover: rgba(248, 239, 2, 0.07);
+  --background-selected: rgba(248, 239, 2, 0.14);
+  --background-inverse: #f8ef02;
+  --layer-01: #121216;
+  --layer-02: #19191f;
+  --layer-03: #26262e;
+  --layer-hover-01: #17171c;
+  --layer-hover-02: #1f1f26;
+  --layer-accent-01: #19191f;
+  --field-01: #0e0e11;
+  --field-02: #121216;
+  --skeleton-background: #121216;
+  --skeleton-element: #1d1d24;
+  --border-subtle-00: #23232b;
+  --border-subtle-01: #32323d;
+  --border-strong-01: #4f4f5e;
+  --border-interactive: #f8ef02;
+  --text-primary: #f2f2f2;
+  --text-secondary: #c4c4cc;
+  --text-helper: #85858f;
+  --text-placeholder: rgba(196, 196, 204, 0.45);
+  --text-inverse: #0a0a0c;
+  --text-on-color: #0a0a0c;
+  --icon-secondary: #c4c4cc;
+  --interactive: #f8ef02;
+  --link-primary: #00ffd2;
+  --link-primary-hover: #8cffe9;
+  --button-primary: #f8ef02;
+  --button-primary-hover: #fff45c;
+  --button-primary-active: #d6ce00;
+  --focus: #00ffd2;
+  --highlight: #3a3700;
+  --support-error: #ff003c;
+  --support-success: #00ffd2;
+  --support-warning: #f8ef02;
+  --support-caution-major: #ff6a00;
+  --support-info: #00ffd2;
+  --tag-red-bg: rgba(255, 0, 60, 0.14);      --tag-red-fg: #ff4d75;     --tag-red-bd: #ff003c;
+  --tag-blue-bg: rgba(248, 239, 2, 0.12);    --tag-blue-fg: #f8ef02;    --tag-blue-bd: #f8ef02;
+  --tag-green-bg: rgba(0, 255, 210, 0.1);    --tag-green-fg: #00ffd2;   --tag-green-bd: #00ffd2;
+  --tag-purple-bg: rgba(190, 120, 255, 0.14); --tag-purple-fg: #cf9bff; --tag-purple-bd: #b56bff;
+  --tag-teal-bg: rgba(70, 223, 251, 0.12);   --tag-teal-fg: #46dffb;    --tag-teal-bd: #46dffb;
+  --tag-gray-bg: rgba(196, 196, 204, 0.08);  --tag-gray-fg: #c4c4cc;    --tag-gray-bd: #4f4f5e;
+  --viz-blue: #f8ef02;
+  --viz-teal: #00ffd2;
+  --radius-tile: 0;
+  --radius-control: 0;
+  --fx-grid: rgba(248, 239, 2, 0.03);
+  --header-bg: rgba(10, 10, 12, 0.9);
+  --display: 'Oxanium', 'Segoe UI', system-ui, sans-serif;
+  --edge: 16px;
+}
+html[data-theme='breach'] body {
+  background:
+    radial-gradient(900px 480px at 0% -10%, rgba(248, 239, 2, 0.07), transparent 60%),
+    radial-gradient(800px 420px at 100% 0%, rgba(255, 0, 60, 0.05), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
+}
+html[data-theme='breach'] .masthead { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+/* Tiles: top-right and bottom-left corners cut, a yellow tab on the top edge. */
+html[data-theme='breach'] .card,
+html[data-theme='breach'] .panel,
+html[data-theme='breach'] .edition,
+html[data-theme='breach'] .sheet {
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - var(--edge)) 0, 100% var(--edge), 100% 100%, var(--edge) 100%, 0 calc(100% - var(--edge)));
+  box-shadow: inset 0 0 0 1px var(--border-subtle-01);
+}
+html[data-theme='breach'] .card::before,
+html[data-theme='breach'] .panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 56px;
+  height: 3px;
+  background: var(--interactive);
+  pointer-events: none;
+  transition: width var(--moderate) var(--ease);
+}
+html[data-theme='breach'] .card::after,
+html[data-theme='breach'] .panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--edge);
+  height: var(--edge);
+  pointer-events: none;
+  background: linear-gradient(to top right, transparent calc(50% - 1px), var(--border-strong-01) calc(50% - 1px), var(--border-strong-01) calc(50% + 1px), transparent calc(50% + 1px));
+}
+html[data-theme='breach'] .card:hover {
+  background: var(--layer-hover-01);
+  box-shadow: inset 0 0 0 1px rgba(248, 239, 2, 0.45);
+}
+html[data-theme='breach'] .card:hover::before { width: 96px; }
+
+/* Display face for the chrome and titles; story text stays in Plex Sans. */
+html[data-theme='breach'] .band-head,
+html[data-theme='breach'] .panel-head h3,
+html[data-theme='breach'] .subsection-head,
+html[data-theme='breach'] .brief-label,
+html[data-theme='breach'] .source-group h3,
+html[data-theme='breach'] .view-head h2,
+html[data-theme='breach'] .sheet-head h2,
+html[data-theme='breach'] .brand-text h1,
+html[data-theme='breach'] .tab,
+html[data-theme='breach'] .sitrep-headline,
+html[data-theme='breach'] .card-title,
+html[data-theme='breach'] .fact dd:not(.fact-note) {
+  font-family: var(--display);
+}
+html[data-theme='breach'] .band-head,
+html[data-theme='breach'] .panel-head h3,
+html[data-theme='breach'] .subsection-head,
+html[data-theme='breach'] .brief-label,
+html[data-theme='breach'] .source-group h3,
+html[data-theme='breach'] .view-head h2,
+html[data-theme='breach'] .sheet-head h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  color: var(--interactive);
+}
+html[data-theme='breach'] .band-head,
+html[data-theme='breach'] .panel-head h3 { font-size: 15px; }
+html[data-theme='breach'] .view-head h2 { font-size: 28px; }
+html[data-theme='breach'] .tab { text-transform: uppercase; letter-spacing: 0.08em; font-size: 13px; font-weight: 500; }
+html[data-theme='breach'] .tab.is-active { color: var(--interactive); }
+html[data-theme='breach'] .sitrep-headline { font-weight: 500; letter-spacing: -0.005em; }
+html[data-theme='breach'] .sitrep-lead-link:hover .sitrep-headline { color: var(--interactive); }
+html[data-theme='breach'] .card-title { font-weight: 500; }
+html[data-theme='breach'] .card-title a:hover { color: var(--interactive); }
+html[data-theme='breach'] .chip,
+html[data-theme='breach'] .tag { border-radius: 0; }
+html[data-theme='breach'] .chip { box-shadow: inset 0 0 0 1px currentColor; }
+html[data-theme='breach'] .chip:not(.chip-kind):not(.chip-signal) { box-shadow: inset 0 0 0 1px var(--border-strong-01); }
+
+/* The notched button: a cut corner and a small step along the bottom edge. */
+html[data-theme='breach'] .primary-btn {
+  font-family: var(--display);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 92% 100%, 92% 86%, 76% 86%, 76% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+html[data-theme='breach'] .pulse { background: #00ffd2; box-shadow: 0 0 10px rgba(0, 255, 210, 0.8); }
+
+/* ---- Responsive ---------------------------------------------------------------- */
 @media (max-width: 880px) {
   :root { --gutter: var(--sp-05); }
   .status-strip { gap: var(--sp-03); }

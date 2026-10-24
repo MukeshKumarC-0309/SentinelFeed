@@ -1800,16 +1800,38 @@ async function restoreExplain() {
   }
 }
 
-function restoreDensity() {
+const THEMES = new Set(['hud', 'breach', 'signal']);
+const DEFAULT_THEME = 'hud';
+
+/**
+ * Switch the look. An unknown or retired theme - one saved before the list
+ * changed - falls back to the default. The browser bar follows the theme's
+ * own background.
+ */
+function applyTheme(name) {
+  const theme = THEMES.has(name) ? name : DEFAULT_THEME;
+  document.documentElement.dataset.theme = theme;
+  $('#theme-select').value = theme;
+  const background = getComputedStyle(document.documentElement).getPropertyValue('--background').trim();
+  if (background) $('meta[name="theme-color"]')?.setAttribute('content', background);
+}
+
+function restoreTheme() {
+  let saved = null;
   try {
-    const saved = localStorage.getItem('sentinel-density');
-    if (saved === 'compact' || saved === 'cards') {
-      state.density = saved;
-      $$('.seg-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.density === saved));
-    }
+    saved = localStorage.getItem('sentinel-theme');
   } catch {
     /* ignore */
   }
+  applyTheme(saved);
+  $('#theme-select').addEventListener('change', (event) => {
+    applyTheme(event.target.value);
+    try {
+      localStorage.setItem('sentinel-theme', event.target.value);
+    } catch {
+      /* per-visit only if storage is unavailable */
+    }
+  });
 }
 
 function restoreFx() {
@@ -1824,6 +1846,7 @@ function restoreFx() {
 }
 
 async function boot() {
+  restoreTheme();
   restoreFx();
   bindEvents();
   await restoreExplain();
