@@ -67,7 +67,8 @@ Carbon, and it fits a security briefing without leaning on neon or
 glow: a dark neutral surface, panels layered one step lighter, a single blue accent, square
 geometry, and status carried by colour-coded tags. Type is [IBM Plex](https://github.com/IBM/plex)
 (SIL Open Font License 1.1) - Plex Sans for reading, Plex Mono for data such as CVE IDs,
-timestamps and counts.
+timestamps and counts - with [Titillium Web](https://fonts.google.com/specimen/Titillium+Web) for the Signal theme
+and [Oxanium](https://fonts.google.com/specimen/Oxanium) for Breach (both OFL 1.1).
 
 There is no Carbon dependency at runtime. The colour, type, spacing and motion values come
 from Carbon's published tokens, and `public/css/style.css` restyles the page's own markup in
@@ -75,6 +76,19 @@ Carbon's idiom: line tabs, tiles, tags, an accordion for topics, a content switc
 table for the entity ledger, inline notifications, a toggletip for the glossary, and a modal
 for device pairing. The fonts are bundled in `public/fonts/` with their licence, so the site
 needs no third-party requests and works offline.
+
+Carbon is the base the styles are written against. On top of it the page wears one of three
+heads-up-display themes, picked from the menu in the header and remembered per browser:
+
+| Theme | Design source | Character |
+| --- | --- | --- |
+| **Sentinel HUD** (default) | inspired by [augmented-ui](https://github.com/propjockey/augmented-ui), BSD-2-Clause | Clipped corners with lit corner marks, a cyan signal colour, monospace system labels, faint scanlines |
+| Breach | after [cyberpunk-css](https://github.com/alddesign/cyberpunk-css), MIT | Signal yellow and red on black, tiles cut at the opposite corners, a notched button, Oxanium display type |
+| Signal | the design language of [Arwes](https://github.com/arwes/arwes), MIT | Arwes's teal palette and yellow highlights, corner-bracket frames, a dotted field, Titillium Web titles |
+
+A theme only re-points the colour and shape tokens and adds a few decorative rules, so
+layout and behaviour are identical in all three. No code from those projects is used. The FX
+switch in the header removes each theme's background grid, dots and scanlines.
 
 ## What it does
 
@@ -612,7 +626,7 @@ Everything is environment variables; defaults are the shipped behaviour.
 ## Generated files
 
 Three things are built rather than committed, so nothing generated can drift out of sync
-with its source (the only binaries in the repository are the five IBM Plex font files):
+with its source (the only binaries in the repository are the bundled font files):
 
 | Path | Built by | From |
 | --- | --- | --- |
@@ -652,7 +666,7 @@ src/atomic.js          Atomic JSON writes, with retries for Windows file locks
 src/pipeline.js        One full refresh
 src/scheduler.js       The 12-hour cycle
 public/                Frontend (no framework, no build)
-public/fonts/          IBM Plex Sans and Mono (Latin-1 subsets) and their licence
+public/fonts/          IBM Plex Sans and Mono, Titillium Web, Oxanium (Latin subsets) and their licences
 data/editions/         One JSON file per edition
 data/trends.json       Theme history and entity ledgers
 data/search.json       Compact archive search index
@@ -677,7 +691,7 @@ bin/sentinel.cmd, bin/sentinel.ps1    The single command (Windows)
 
 ```bash
 npm start                      # run the site in the foreground
-npm test                       # 61 offline checks, no network
+npm test                       # 62 offline checks, no network
 npm run refresh                # build one edition without starting the server
 npm run sources                # poll every feed and report health
 npm run service:install        # run in the background at login (macOS or Windows)
